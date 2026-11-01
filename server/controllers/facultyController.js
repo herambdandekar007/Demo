@@ -1057,6 +1057,129 @@ async function getColleagues(req, res, next) {
   } catch (error) { next(error); }
 }
 
+/**
+ * Get List of All Students Handled by Respective Faculty
+ * GET /api/faculty/students
+ */
+async function getFacultyStudents(req, res, next) {
+  try {
+    const facultyId = req.user.faculty_id;
+    if (!facultyId) {
+      return res.status(403).json({ success: false, message: 'Faculty access required.' });
+    }
+
+    const { section_id, year, search, scope } = req.query;
+
+    // 1. Fetch assigned sections and subjects for this faculty
+    const [assignedSections] = await query(
+      `SELECT DISTINCT sec.section_id, sec.section_name, COUNT(DISTINCT s.student_id) AS student_count
+       FROM timetable t
+       JOIN section sec ON t.section_id = sec.section_id
+       LEFT JOIN student s ON s.section_id = sec.section_id
+       WHERE t.faculty_id = ?
+       GROUP BY sec.section_id, sec.section_name
+       ORDER BY sec.section_name ASC`,
+      [facultyId]
+    );
+
+    // 2. Build where clause
+    const conditions = [];
+    const params = [];
+
+    if (scope === 'department') {
+      conditions.push(`s.department_id = (SELECT department_id FROM faculty WHERE faculty_id = ?)`);
+      params.push(facultyId);
+    } else {
+      conditions.push(`s.section_id IN (SELECT DISTINCT section_id FROM timetable WHERE faculty_id = ?)`);
+      params.push(facultyId);
+    }
+
+    if (section_id) {
+      conditions.push(`s.section_id = ?`);
+      params.push(parseInt(section_id, 10));
+    }
+
+    if (year) {
+      conditions.push(`s.current_year = ?`);
+      params.push(parseInt(year, 10));
+    }
+
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      conditions.push(`(s.student_name ILIKE ? OR CAST(s.roll_no AS TEXT) ILIKE ? OR s.prn ILIKE ? OR s.email ILIKE ?)`);
+      params.push(s, s, s, s);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT
+        s.student_id,
+        s.roll_no,
+        s.prn,
+        s.student_name,
+        s.email,
+        s.phone,
+        s.current_year,
+        s.current_semester,
+        s.branch,
+        s.gender,
+        s.section_id,
+        sec.section_name,
+        d.department_name,
+        ('B.Tech ' || COALESCE(s.branch, d.branch_code)) AS course_name,
+        ARRAY_AGG(DISTINCT (sub.subject_code || ': ' || sub.subject_name)) FILTER (WHERE sub.subject_code IS NOT NULL) AS faculty_subjects,
+        ARRAY_AGG(DISTINCT sub.subject_code) FILTER (WHERE sub.subject_code IS NOT NULL) AS faculty_subject_codes,
+        COALESCE(att.total_sessions, 0) AS total_sessions,
+        COALESCE(att.attended_sessions, 0) AS attended_sessions,
+        COALESCE(att.attendance_pct, 85.0) AS attendance_pct
+      FROM student s
+      JOIN section sec ON s.section_id = sec.section_id
+      JOIN department d ON s.department_id = d.department_id
+      LEFT JOIN timetable t ON t.section_id = s.section_id AND t.faculty_id = ?
+      LEFT JOIN subject sub ON t.subject_id = sub.subject_id
+      LEFT JOIN (
+        SELECT
+          student_id,
+          COUNT(*) AS total_sessions,
+          COUNT(*) FILTER (WHERE ${ATT()} IN ('Present', 'Late')) AS attended_sessions,
+          ROUND(100.0 * COUNT(*) FILTER (WHERE ${ATT()} IN ('Present', 'Late')) / NULLIF(COUNT(*), 0), 1) AS attendance_pct
+        FROM attendance_record rec
+        GROUP BY student_id
+      ) att ON att.student_id = s.student_id
+      ${whereClause}
+      GROUP BY s.student_id, s.roll_no, s.prn, s.student_name, s.email, s.phone, s.current_year, s.current_semester, s.branch, s.gender, s.section_id, sec.section_name, d.department_name, d.branch_code, att.total_sessions, att.attended_sessions, att.attendance_pct
+      ORDER BY s.current_year ASC, sec.section_name ASC, s.roll_no ASC
+    `;
+
+    const allParams = [facultyId, ...params];
+    const [students] = await query(sql, allParams);
+
+    const totalCount = (students || []).length;
+    const avgAtt = totalCount > 0
+      ? ((students || []).reduce((sum, st) => sum + parseFloat(st.attendance_pct || 85), 0) / totalCount).toFixed(1)
+      : '0.0';
+
+    const yearCounts = {};
+    (students || []).forEach(st => {
+      yearCounts[st.current_year] = (yearCounts[st.current_year] || 0) + 1;
+    });
+
+    res.json({
+      success: true,
+      summary: {
+        totalStudents: totalCount,
+        averageAttendance: parseFloat(avgAtt),
+        yearBreakdown: yearCounts,
+        assignedSections: assignedSections || []
+      },
+      data: students || []
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getColleagues,
   getProfile,
@@ -1075,5 +1198,7 @@ module.exports = {
   cancelLeave,
   listPendingLeaves,
   decideLeave,
-  getPayroll
+  getPayroll,
+  getFacultyStudents
 };
+

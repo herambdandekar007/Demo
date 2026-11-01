@@ -11,7 +11,8 @@ import {
   X, 
   Bell, 
   Briefcase,
-  Eye
+  Eye,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { StudentPreviewModal } from '../common/StudentPreviewModal';
@@ -30,6 +31,7 @@ export const FacultyLayout: React.FC = () => {
 
   const navItems = [
     { to: "/faculty/dashboard", label: "Faculty Dashboard", icon: LayoutDashboard },
+    { to: "/faculty/students", label: "My Students Roster", icon: Users },
     { to: "/faculty/attendance", label: "Attendance Management", icon: CheckSquare },
     { to: "/faculty/grading", label: "Examination & Grading", icon: Award },
     { to: "/faculty/leave", label: "Leave Application", icon: CalendarOff },

@@ -13,6 +13,9 @@ router.get('/profile', facultyController.getProfile);
 // Faculty Dashboard Summary & Schedule
 router.get('/dashboard', facultyController.getDashboard);
 
+// Handled Students Roster
+router.get('/students', facultyController.getFacultyStudents);
+
 // Class Attendance Marking
 router.get('/attendance', facultyController.getAttendanceRoster);
 router.post('/attendance', facultyController.saveAttendance);

@@ -927,6 +927,111 @@ class ApiClient {
     }
   }
 
+  async getFacultyStudents(params?: { section_id?: number; year?: number; search?: string; scope?: string }) {
+    const q = new URLSearchParams();
+    if (params?.section_id) q.set('section_id', String(params.section_id));
+    if (params?.year) q.set('year', String(params.year));
+    if (params?.search) q.set('search', params.search);
+    if (params?.scope) q.set('scope', params.scope);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+
+    try {
+      return await this.request<{
+        success: boolean;
+        summary: {
+          totalStudents: number;
+          averageAttendance: number;
+          yearBreakdown: Record<string, number>;
+          assignedSections: Array<{ section_id: number; section_name: string; student_count: number }>;
+        };
+        data: any[];
+      }>(`/faculty/students${qs}`);
+    } catch (__e) {
+      if (!DEMO_MODE) throw __e;
+
+      let facultyCode = 'FAC-001';
+      try {
+        const stored = localStorage.getItem('college_erp_user') || localStorage.getItem('erp_user');
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u.codeOrRoll) facultyCode = u.codeOrRoll;
+        }
+      } catch { }
+
+      const all = reactiveDb.getAllStudents();
+      const isVarun = facultyCode.toLowerCase().includes('fac-002') || facultyCode.toLowerCase().includes('pawar');
+
+      const mapped = all.map(s => {
+        const isSecondYear = s.roll_no === '21001' || s.current_semester <= 4;
+        const subjects = isVarun
+          ? ['ENTC007: Control Systems', 'EC301-OE: Microcontroller & IoT Systems']
+          : (isSecondYear ? ['CS202: Object Oriented Programming'] : ['CS007: Web Technology', 'CS301: Data Structures']);
+
+        return {
+          student_id: s.id,
+          roll_no: s.roll_no,
+          prn: s.prn,
+          student_name: s.name,
+          email: s.email,
+          phone: s.phone,
+          current_year: isSecondYear ? 2 : 3,
+          current_semester: s.current_semester,
+          branch: s.branch || 'Computer Science',
+          gender: s.gender || 'Scholar',
+          section_id: isSecondYear ? 21 : 1,
+          section_name: isSecondYear ? 'CS-2B' : 'CS-1',
+          department_name: s.department_name || 'Computer Science',
+          course_name: s.course_name || 'B.Tech CS',
+          faculty_subjects: subjects,
+          faculty_subject_codes: subjects.map(sb => sb.split(':')[0].trim()),
+          total_sessions: 20,
+          attended_sessions: Math.round(20 * (s.attendance_pct / 100)),
+          attendance_pct: s.attendance_pct
+        };
+      });
+
+      let filtered = mapped;
+      if (params?.year) {
+        filtered = filtered.filter(st => st.current_year === Number(params.year));
+      }
+      if (params?.section_id) {
+        filtered = filtered.filter(st => st.section_id === Number(params.section_id));
+      }
+      if (params?.search) {
+        const term = params.search.toLowerCase();
+        filtered = filtered.filter(st =>
+          st.student_name.toLowerCase().includes(term) ||
+          String(st.roll_no).toLowerCase().includes(term) ||
+          st.prn.toLowerCase().includes(term) ||
+          st.email.toLowerCase().includes(term)
+        );
+      }
+
+      const yearCounts: Record<string, number> = {};
+      filtered.forEach(st => {
+        yearCounts[st.current_year] = (yearCounts[st.current_year] || 0) + 1;
+      });
+
+      const avgAtt = filtered.length > 0
+        ? (filtered.reduce((sum, st) => sum + (st.attendance_pct || 85), 0) / filtered.length).toFixed(1)
+        : '0.0';
+
+      return {
+        success: true,
+        summary: {
+          totalStudents: filtered.length,
+          averageAttendance: parseFloat(avgAtt),
+          yearBreakdown: yearCounts,
+          assignedSections: [
+            { section_id: 1, section_name: 'CS-1', student_count: 53 },
+            { section_id: 21, section_name: 'CS-2B', student_count: 1 }
+          ]
+        },
+        data: filtered
+      };
+    }
+  }
+
   async getFacultyStudentPreview(studentId: number) {
     try {
       return await this.request<any>(`/faculty/preview-student/${studentId}`);

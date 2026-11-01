@@ -11,7 +11,8 @@ import {
   UserCheck,
   AlertCircle,
   TrendingUp,
-  FileText
+  FileText,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/common/StatCard';
@@ -68,6 +69,13 @@ export const FacultyDashboardPage: React.FC = () => {
             >
               <CheckSquare className="w-3.5 h-3.5" />
               Take Class Attendance Now
+            </Link>
+            <Link
+              to="/faculty/students"
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white px-3.5 py-1.5 rounded-lg font-bold transition-all shadow-sm border border-white/20 backdrop-blur-sm"
+            >
+              <Users className="w-3.5 h-3.5 text-ice-200" />
+              My Students Roster
             </Link>
           </div>
         </div>
@@ -193,6 +201,26 @@ export const FacultyDashboardPage: React.FC = () => {
 
         {/* Right 1 Col: Leave & Payroll Quick Widgets */}
         <div className="space-y-6">
+          {/* Handled Scholars Quick Widget */}
+          <div className="erp-card p-5 bg-white shadow-bento">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold text-navy-950 uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-blue-600" />
+                Handled Scholars Roster
+              </h4>
+              <Badge variant="info">Active</Badge>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">
+              Direct access to scholars enrolled in your assigned lecture and laboratory cohorts.
+            </p>
+            <Link
+              to="/faculty/students"
+              className="inline-flex items-center justify-center w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-colors shadow-sm"
+            >
+              View All Handled Students →
+            </Link>
+          </div>
+
           {/* Leave Quick Summary */}
           <div className="erp-card p-5">
             <div className="flex items-center justify-between mb-3">

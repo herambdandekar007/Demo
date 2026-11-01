@@ -27,6 +27,7 @@ import { FacultyAttendancePage } from './pages/faculty/FacultyAttendancePage';
 import { FacultyGradingPage } from './pages/faculty/FacultyGradingPage';
 import { FacultyLeavePage } from './pages/faculty/FacultyLeavePage';
 import { FacultyPayrollPage } from './pages/faculty/FacultyPayrollPage';
+import { FacultyStudentsPage } from './pages/faculty/FacultyStudentsPage';
 
 // Staff Pages
 import { StaffDashboardPage } from './pages/staff/StaffDashboardPage';
@@ -75,6 +76,7 @@ export const App: React.FC = () => {
           <Route path="/faculty" element={<FacultyLayout />}>
             <Route index element={<Navigate to="/faculty/dashboard" replace />} />
             <Route path="dashboard" element={<FacultyDashboardPage />} />
+            <Route path="students" element={<FacultyStudentsPage />} />
             <Route path="attendance" element={<FacultyAttendancePage />} />
             <Route path="grading" element={<FacultyGradingPage />} />
             <Route path="leave" element={<FacultyLeavePage />} />
