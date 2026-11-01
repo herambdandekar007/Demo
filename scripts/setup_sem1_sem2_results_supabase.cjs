@@ -240,44 +240,44 @@ async function setupSem1AndSem2Results() {
   await query('DELETE FROM result WHERE student_id = ? AND exam_id = 6', [studentId]);
   console.log('  Cleaned up invalid Semester 5 result for Aryan.');
 
-  // Semester 1 Result
+  // Semester 1 Result (Credits: 20, Points: 166.8 -> SGPA: 8.34, CGPA: 8.34)
   const [res1] = await query('SELECT result_id FROM result WHERE student_id = ? AND exam_id = ?', [studentId, exam1Id]);
   if (res1.length > 0) {
     await query(
       `UPDATE result
-       SET sgpa = 7.55, cgpa = 7.55, result_date = '2026-01-12', overall_status = 'PASS'
+       SET sgpa = 8.34, cgpa = 8.34, result_date = '2026-01-12', overall_status = 'PASS'
        WHERE result_id = ?`,
       [res1[0].result_id]
     );
-    console.log(`  Updated Result for Sem 1 -> result_id ${res1[0].result_id}`);
+    console.log(`  Updated Result for Sem 1 -> result_id ${res1[0].result_id} (SGPA: 8.34, CGPA: 8.34)`);
   } else {
     const [maxR] = await query('SELECT COALESCE(MAX(result_id), 0) + 1 AS next_id FROM result');
     await query(
       `INSERT INTO result (result_id, student_id, exam_id, sgpa, cgpa, result_date, overall_status)
-       VALUES (?, ?, ?, 7.55, 7.55, '2026-01-12', 'PASS')`,
+       VALUES (?, ?, ?, 8.34, 8.34, '2026-01-12', 'PASS')`,
       [maxR[0].next_id, studentId, exam1Id]
     );
-    console.log(`  Inserted Result for Sem 1 -> result_id ${maxR[0].next_id}`);
+    console.log(`  Inserted Result for Sem 1 -> result_id ${maxR[0].next_id} (SGPA: 8.34, CGPA: 8.34)`);
   }
 
-  // Semester 2 Result
+  // Semester 2 Result (Credits: 20, Points: 169.6 -> SGPA: 8.48, Combined CGPA: 336.4 / 40 = 8.41)
   const [res2] = await query('SELECT result_id FROM result WHERE student_id = ? AND exam_id = ?', [studentId, exam2Id]);
   if (res2.length > 0) {
     await query(
       `UPDATE result
-       SET sgpa = 7.85, cgpa = 7.70, result_date = '2026-06-18', overall_status = 'PASS'
+       SET sgpa = 8.48, cgpa = 8.41, result_date = '2026-06-18', overall_status = 'PASS'
        WHERE result_id = ?`,
       [res2[0].result_id]
     );
-    console.log(`  Updated Result for Sem 2 -> result_id ${res2[0].result_id}`);
+    console.log(`  Updated Result for Sem 2 -> result_id ${res2[0].result_id} (SGPA: 8.48, CGPA: 8.41)`);
   } else {
     const [maxR] = await query('SELECT COALESCE(MAX(result_id), 0) + 1 AS next_id FROM result');
     await query(
       `INSERT INTO result (result_id, student_id, exam_id, sgpa, cgpa, result_date, overall_status)
-       VALUES (?, ?, ?, 7.85, 7.70, '2026-06-18', 'PASS')`,
+       VALUES (?, ?, ?, 8.48, 8.41, '2026-06-18', 'PASS')`,
       [maxR[0].next_id, studentId, exam2Id]
     );
-    console.log(`  Inserted Result for Sem 2 -> result_id ${maxR[0].next_id}`);
+    console.log(`  Inserted Result for Sem 2 -> result_id ${maxR[0].next_id} (SGPA: 8.48, CGPA: 8.41)`);
   }
 
   console.log('\n=== SEMESTER 1 & 2 RESULTS & MARKS CONFIGURED SUCCESSFULLY! ===\n');

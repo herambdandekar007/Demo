@@ -161,6 +161,28 @@ export const StudentResultPage: React.FC = () => {
 
   const totalCredits = currentSubjects.reduce((acc, s) => acc + (s.credits || 0), 0);
 
+  // Mathematically calculated SGPA: sum(credits * grade_point) / sum(credits)
+  const currentGradedSubjects = currentSubjects.filter(s => s.grade_point != null && !isNaN(Number(s.grade_point)));
+  const currentEarnedPoints = currentGradedSubjects.reduce((acc, s) => acc + (Number(s.credits) || 0) * Number(s.grade_point), 0);
+  const currentGradedCredits = currentGradedSubjects.reduce((acc, s) => acc + (Number(s.credits) || 0), 0);
+  const activeSgpa = currentGradedCredits > 0 
+    ? (currentEarnedPoints / currentGradedCredits) 
+    : Number(currentResult?.sgpa || 0);
+
+  // Mathematically calculated Cumulative CGPA across completed semesters
+  const completedSemesters = results
+    .filter(r => currentResult && r.semester_number <= currentResult.semester_number)
+    .map(r => r.semester_number);
+  
+  const cumulativeSubjects = marks.filter(m => 
+    m.semester_number && completedSemesters.includes(m.semester_number) && m.grade_point != null && !isNaN(Number(m.grade_point))
+  );
+  const cumulativeEarnedPoints = cumulativeSubjects.reduce((acc, s) => acc + (Number(s.credits) || 0) * Number(s.grade_point), 0);
+  const cumulativeCredits = cumulativeSubjects.reduce((acc, s) => acc + (Number(s.credits) || 0), 0);
+  const activeCgpa = cumulativeCredits > 0 
+    ? (cumulativeEarnedPoints / cumulativeCredits) 
+    : Number(currentResult?.cgpa || 0);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-16 space-y-4">
@@ -217,7 +239,7 @@ export const StudentResultPage: React.FC = () => {
                 Semester Grade Point Average (SGPA)
               </span>
               <h3 className="text-3xl font-extrabold font-mono text-white tracking-tight">
-                {Number(currentResult.sgpa || 0).toFixed(2)}
+                {Number(activeSgpa || 0).toFixed(2)}
               </h3>
               <p className="text-xs text-sky-200/80 mt-1">Scale of 10.00 • {currentResult.semester_label}</p>
             </div>
@@ -227,7 +249,7 @@ export const StudentResultPage: React.FC = () => {
                 Cumulative CGPA
               </span>
               <h3 className="text-3xl font-extrabold font-mono text-navy-950">
-                {Number(currentResult.cgpa || 0).toFixed(2)}
+                {Number(activeCgpa || 0).toFixed(2)}
               </h3>
               <p className="text-xs text-slate-400 mt-1">Overall Cumulative Score</p>
             </div>
@@ -237,7 +259,7 @@ export const StudentResultPage: React.FC = () => {
                 Credits Registered
               </span>
               <h3 className="text-3xl font-extrabold font-mono text-navy-950">
-                {totalCredits > 0 ? totalCredits : 19}
+                {totalCredits > 0 ? totalCredits : 20}
               </h3>
               <p className="text-xs text-slate-400 mt-1">Earned in Academic Term</p>
             </div>
@@ -478,10 +500,10 @@ export const StudentResultPage: React.FC = () => {
 
             <div className="border-t-2 border-navy-950 pt-3 flex items-center justify-between text-xs">
               <div>
-                Semester SGPA: <strong className="font-mono text-navy-950 text-sm">{Number(currentResult.sgpa || 0).toFixed(2)}</strong>
+                Semester SGPA: <strong className="font-mono text-navy-950 text-sm">{Number(activeSgpa || 0).toFixed(2)}</strong>
               </div>
               <div>
-                Cumulative CGPA: <strong className="font-mono text-navy-950 text-sm">{Number(currentResult.cgpa || 0).toFixed(2)}</strong>
+                Cumulative CGPA: <strong className="font-mono text-navy-950 text-sm">{Number(activeCgpa || 0).toFixed(2)}</strong>
               </div>
               <div>
                 Status: <strong className="text-emerald-700">{String(currentResult.overall_status).toUpperCase()}</strong>

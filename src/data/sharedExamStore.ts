@@ -704,13 +704,16 @@ class SharedExamStore {
       });
     });
 
-    // Compute cumulative CGPA across all semesters
-    const overallCgpa = cumulativeCredits > 0
-      ? Math.round((cumulativePoints / cumulativeCredits) * 100) / 100
-      : (results[0]?.sgpa || 8.50);
-
+    // Compute progressive cumulative CGPA up to each semester
+    let runPoints = 0;
+    let runCredits = 0;
     results.forEach(r => {
-      r.cgpa = overallCgpa;
+      const semMarks = studentMarks.filter(m => m.semester_number === r.semester_number);
+      const sCredits = semMarks.reduce((acc, m) => acc + (m.credits || 4), 0);
+      const sPoints = semMarks.reduce((acc, m) => acc + (m.credits || 4) * (m.grade_point || 0), 0);
+      runPoints += sPoints;
+      runCredits += sCredits;
+      r.cgpa = runCredits > 0 ? Math.round((runPoints / runCredits) * 100) / 100 : r.sgpa;
     });
 
     return {
