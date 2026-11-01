@@ -27,7 +27,9 @@ yarn-error.log*
 server/logs/
 *.log
 
-# Editor & OS files
+# Editor, Temp & OS files
+*.bak
+*.patch
 .vscode/
 .idea/
 .DS_Store

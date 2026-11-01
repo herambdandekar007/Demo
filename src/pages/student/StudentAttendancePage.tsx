@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import { DataTable, Column } from '../../components/common/DataTable';
-import { mockTimetables } from '../../data/mockAcademic';
 import { api } from '../../services/api';
 
 import { useAuth } from '../../context/AuthContext';

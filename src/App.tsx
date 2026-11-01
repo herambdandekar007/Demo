@@ -95,6 +95,8 @@ export const App: React.FC = () => {
             {/* Finance Officer Routes */}
             <Route path="fees" element={<FinanceFeesPage initialTab="fees" />} />
             <Route path="payments" element={<FinanceFeesPage initialTab="payments" />} />
+            <Route path="payroll" element={<FinanceFeesPage initialTab="payroll" />} />
+            <Route path="library-fines" element={<FinanceFeesPage initialTab="library-fines" />} />
             <Route path="fee-structures" element={<FinanceFeesPage initialTab="structures" />} />
             <Route path="reports" element={<FinanceFeesPage initialTab="reports" />} />
 

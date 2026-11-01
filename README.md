@@ -72,6 +72,7 @@ You can click the quick demo chips on the login page or enter these credentials:
 
 | Role | Username / ID | Password | Notes |
 | :--- | :--- | :--- | :--- |
+| **Student** | `21001` or `f25ce001@student.example.edu` | `Aryan@21001` | **2nd Year** · Semester 3, CSE Sec B, Sem-3 subjects (OOP, Digital Electronics, Maths III, etc.) |
 | **Student** | `31001` or `f24ce001@student.example.edu` | `Kavya@31001` | Computer Science, 90% attendance, fee & placement data |
 | **Student** | `31002` or `f24ce002@student.example.edu` | `Siddharth@31002` | High CGPA, TCS application |
 | **Faculty** | `FAC-001` or `faculty1@example.edu` | `Ashwini@FAC001` | Associate Professor, CS Department |

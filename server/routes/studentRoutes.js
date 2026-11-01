@@ -20,6 +20,7 @@ router.post('/fees/pay', studentController.payFee);
 
 // Library Loans, Circulation & Overdue Fines
 router.get('/library', studentController.getLibrary);
+router.get('/library/catalog', studentController.getLibraryCatalog);
 
 // Examinations & Hall Tickets
 router.get('/exams', studentController.getExams);

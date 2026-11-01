@@ -1,5 +1,11 @@
 const { pool, query } = require('../config/db');
 
+// Postgres-safe weekday ordering (replaces MySQL FIELD())
+const DAY_ORDER = (col) => `CASE ${col} WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END`;
+const ATT = (a = 'rec') => `COALESCE(${a}.attendance_status, ${a}.status)`;
+const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(v).getTime());
+const isTime = (v) => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(v);
+
 function formatTime12(tStr) {
   if (!tStr) return '';
   const parts = String(tStr).split(':');
@@ -62,14 +68,14 @@ async function getDashboard(req, res, next) {
        JOIN subject s ON t.subject_id = s.subject_id
        JOIN section sec ON t.section_id = sec.section_id
        WHERE t.faculty_id = ?
-       ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), t.start_time ASC`,
+       ORDER BY ${DAY_ORDER('t.day_of_week')}, t.start_time ASC`,
       [facultyId]
     );
 
     const [recentAttendance] = await query(
       `SELECT ses.session_id, ses.session_date, s.subject_code, s.subject_name, sec.section_name,
-              COUNT(rec.record_id) AS total_students,
-              SUM(CASE WHEN rec.status = 'Present' THEN 1 ELSE 0 END) AS present_count
+              COUNT(rec.session_id) AS total_students,
+              COUNT(rec.session_id) FILTER (WHERE ${ATT()} IN ('Present', 'Late')) AS present_count
        FROM attendance_session ses
        JOIN subject s ON ses.subject_id = s.subject_id
        JOIN section sec ON ses.section_id = sec.section_id
@@ -185,9 +191,9 @@ async function getAttendanceRoster(req, res, next) {
       `SELECT ses.session_id AS id, ses.session_date AS date, sec.section_name AS division,
               CONCAT(sub.subject_code, ' - ', sub.subject_name) AS subject,
               ses.period,
-              COUNT(rec.attendance_id) AS total_students,
-              SUM(CASE WHEN rec.attendance_status = 'Present' OR rec.status = 'Present' THEN 1 ELSE 0 END) AS present_count,
-              SUM(CASE WHEN rec.attendance_status = 'Absent' OR rec.status = 'Absent' THEN 1 ELSE 0 END) AS absent_count,
+              COUNT(rec.session_id) AS total_students,
+              COUNT(rec.session_id) FILTER (WHERE ${ATT()} IN ('Present', 'Late')) AS present_count,
+              COUNT(rec.session_id) FILTER (WHERE ${ATT()} = 'Absent') AS absent_count,
               ses.created_at AS saved_at,
               ses.is_locked,
               CASE 
@@ -213,7 +219,7 @@ async function getAttendanceRoster(req, res, next) {
        JOIN subject s ON t.subject_id = s.subject_id
        JOIN section sec ON t.section_id = sec.section_id
        WHERE t.faculty_id = ?
-       ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), t.start_time ASC`,
+       ORDER BY ${DAY_ORDER('t.day_of_week')}, t.start_time ASC`,
       [facultyId]
     );
 
@@ -267,8 +273,11 @@ async function saveAttendance(req, res, next) {
 
     const sessionDate = date || new Date().toISOString().split('T')[0];
     const sessionPeriod = period || 'Period 1';
-    const subId = subject_id || 1;
-    const secId = section_id || 1;
+    if (!subject_id || !section_id) {
+      return res.status(400).json({ success: false, message: 'subject_id and section_id are required.' });
+    }
+    const subId = subject_id;
+    const secId = section_id;
 
     conn = await pool.getConnection();
     await conn.beginTransaction();
@@ -317,17 +326,14 @@ async function saveAttendance(req, res, next) {
 
     // Atomic multi-row upsert into attendance_record
     for (const rec of records) {
-      const [existingRec] = await conn.execute(
-        `SELECT attendance_id FROM attendance_record WHERE session_id = ? AND student_id = ?`,
-        [sessionId, rec.student_id]
+      const attStatus = ['Present', 'Absent', 'Late'].includes(rec.status) ? rec.status : 'Present';
+      // identify the row by (session, student) - attendance_record has both attendance_id and record_id, so neither is relied on
+      const [upd] = await conn.execute(
+        `UPDATE attendance_record SET attendance_status = ?, status = ?, marked_at = NOW()
+         WHERE session_id = ? AND student_id = ? RETURNING session_id`,
+        [attStatus, attStatus, sessionId, rec.student_id]
       );
-      const attStatus = rec.status || 'Present';
-      if (existingRec && existingRec.length > 0) {
-        await conn.execute(
-          `UPDATE attendance_record SET attendance_status = ?, status = ?, marked_at = NOW() WHERE attendance_id = ?`,
-          [attStatus, attStatus, existingRec[0].attendance_id]
-        );
-      } else {
+      if (!upd.length) {
         await conn.execute(
           `INSERT INTO attendance_record (session_id, student_id, attendance_status, status, marked_at)
            VALUES (?, ?, ?, ?, NOW())`,
@@ -348,6 +354,10 @@ async function saveAttendance(req, res, next) {
     });
   } catch (err) {
     if (conn) await conn.rollback();
+    // fn_attendance_check raises this when a student is not in the session's section
+    if (err && (err.code === 'P0001' || /does not belong to the section/i.test(err.message || ''))) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
     next(err);
   } finally {
     if (conn) conn.release();
@@ -355,8 +365,11 @@ async function saveAttendance(req, res, next) {
 }
 
 /**
- * Get Grading Roster & Mark Sheets
- * GET /api/faculty/grading
+ * Grading roster for ONE exam schedule.
+ * The roster is the whole cohort of the subject (same department, same semester) LEFT JOINed to any marks
+ * already saved - so marks can be entered for the first time. (It used to list only students who already
+ * had a marks row, which is why a fresh subject showed "0 candidates".)
+ * GET /api/faculty/grading?schedule_id=
  */
 async function getGradingRoster(req, res, next) {
   try {
@@ -365,26 +378,58 @@ async function getGradingRoster(req, res, next) {
       return res.status(403).json({ success: false, message: 'Faculty ID not associated with account.' });
     }
 
-    const [fac] = await query('SELECT department_id FROM faculty WHERE faculty_id = ?', [facultyId]);
-    const deptId = fac[0]?.department_id || 1;
+    const mySubjects = `SELECT subject_id FROM faculty_subject_assignment WHERE faculty_id = ?
+                        UNION SELECT subject_id FROM timetable WHERE faculty_id = ?`;
 
-    const [marks] = await query(
-      `SELECT m.mark_id, m.mid_sem, m.internal_marks, m.end_sem, m.marks_obtained, m.max_marks, m.grade_letter, m.status,
-              s.student_id, s.roll_no, s.student_name AS name,
-              sub.subject_code, sub.subject_name
-       FROM marks m
-       JOIN student s ON m.student_id = s.student_id
-       JOIN exam_schedule es ON m.schedule_id = es.schedule_id
+    const [schedules] = await query(
+      `SELECT es.schedule_id, es.exam_id, e.exam_name, e.exam_type, sub.subject_id, sub.subject_code, sub.subject_name,
+              sub.semester_number, es.exam_date
+       FROM exam_schedule es
+       JOIN exam e ON es.exam_id = e.exam_id
        JOIN subject sub ON es.subject_id = sub.subject_id
-       WHERE s.department_id = ?
-       ORDER BY s.roll_no ASC
-       LIMIT 30`,
-      [deptId]
+       WHERE es.subject_id IN (${mySubjects})
+       ORDER BY es.exam_date DESC, es.schedule_id DESC`,
+      [facultyId, facultyId]
+    );
+
+    // subjects the faculty teaches that have no exam scheduled yet - the UI explains why there is nothing to grade
+    const [unscheduled] = await query(
+      `SELECT sub.subject_id, sub.subject_code, sub.subject_name
+       FROM subject sub
+       WHERE sub.subject_id IN (${mySubjects})
+         AND NOT EXISTS (SELECT 1 FROM exam_schedule es WHERE es.subject_id = sub.subject_id)
+       ORDER BY sub.subject_code`,
+      [facultyId, facultyId]
+    );
+
+    const requested = req.query.schedule_id ? parseInt(req.query.schedule_id, 10) : null;
+    const active = requested ? schedules.find(x => x.schedule_id === requested) : schedules[0];
+
+    if (!active) {
+      return res.json({ success: true, data: [], schedules: schedules || [], unscheduledSubjects: unscheduled || [] });
+    }
+
+    const [roster] = await query(
+      `SELECT s.student_id, s.roll_no, s.student_name AS name, sec.section_name,
+              m.mark_id, ? AS schedule_id, m.mid_sem, m.internal_marks, m.end_sem, m.marks_obtained,
+              m.grade_letter, m.grade_point, m.status
+       FROM student s
+       LEFT JOIN section sec ON s.section_id = sec.section_id
+       LEFT JOIN marks m ON m.student_id = s.student_id AND m.schedule_id = ?
+       WHERE m.mark_id IS NOT NULL
+          OR s.student_id IN (SELECT student_id FROM student_subject_enrollment WHERE subject_id = ?)
+          OR (s.department_id = (SELECT department_id FROM subject WHERE subject_id = ?)
+              AND s.current_semester = (SELECT semester_number FROM subject WHERE subject_id = ?))
+       ORDER BY s.roll_no ASC`,
+      [active.schedule_id, active.schedule_id, active.subject_id, active.subject_id, active.subject_id]
     );
 
     res.json({
       success: true,
-      data: marks || []
+      data: roster || [],
+      schedules,
+      unscheduledSubjects: unscheduled || [],
+      activeScheduleId: active.schedule_id
     });
   } catch (error) {
     next(error);
@@ -392,39 +437,79 @@ async function getGradingRoster(req, res, next) {
 }
 
 /**
- * Save Student Marks (Uniform 20 Mid-Sem / 20 Internal / 60 End-Sem = 100 Total)
- * POST /api/faculty/grading
+ * Save Student Marks for ONE exam schedule (20 mid-sem / 20 internal / 60 end-sem = 100).
+ * Grade letter / grade point / pass-fail are computed by the DB trigger fn_marks_grade,
+ * and results (SGPA/CGPA) by calculate_result via trigger trg_marks_results_sync.
+ * POST /api/faculty/grading   body: { schedule_id, marks: [{student_id, mid_sem, internal_marks, end_sem, status?}] }
  */
 async function saveGrading(req, res, next) {
+  let conn;
   try {
-    const { marks } = req.body;
-    if (!marks || !Array.isArray(marks)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Marks array is required.'
-      });
+    const facultyId = req.user.faculty_id;
+    const { marks, schedule_id } = req.body;
+    if (!facultyId) {
+      return res.status(403).json({ success: false, message: 'Faculty ID not associated with account.' });
+    }
+    if (!Array.isArray(marks) || marks.length === 0) {
+      return res.status(400).json({ success: false, message: 'Marks array is required.' });
+    }
+    if (!schedule_id) {
+      return res.status(400).json({ success: false, message: 'schedule_id is required (marks must be saved per exam schedule).' });
     }
 
+    // Faculty must teach the subject of this exam schedule
+    const [allowed] = await query(
+      `SELECT es.schedule_id FROM exam_schedule es
+       WHERE es.schedule_id = ? AND es.subject_id IN (
+         SELECT subject_id FROM faculty_subject_assignment WHERE faculty_id = ?
+         UNION SELECT subject_id FROM timetable WHERE faculty_id = ?)`,
+      [schedule_id, facultyId, facultyId]
+    );
+    if (!allowed.length && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'You are not assigned to the subject of this exam schedule.' });
+    }
+
+    // Validate every row before writing anything
     for (const m of marks) {
-      const midSem = Number(m.mid_sem || 0);
-      const internalMarks = Number(m.internal_marks || 0);
-      const endSem = Number(m.end_sem || 0);
-      const totalMarks = midSem + internalMarks + endSem;
-
-      await query(
-        `UPDATE marks 
-         SET mid_sem = ?, internal_marks = ?, end_sem = ?, marks_obtained = ?, grade_letter = ?, status = ? 
-         WHERE student_id = ?`,
-        [midSem, internalMarks, endSem, totalMarks, m.grade_letter, m.status || 'Present', m.student_id]
-      );
+      const mid = Number(m.mid_sem ?? 0), internal = Number(m.internal_marks ?? 0), end = Number(m.end_sem ?? 0);
+      if (!m.student_id || [mid, internal, end].some(v => Number.isNaN(v) || v < 0)) {
+        return res.status(400).json({ success: false, message: `Invalid marks for student ${m.student_id}.` });
+      }
+      if (mid > 20 || internal > 20 || end > 60) {
+        return res.status(400).json({ success: false, message: `Student ${m.student_id}: limits are mid-sem 20, internal 20, end-sem 60.` });
+      }
     }
+
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+    let updated = 0, inserted = 0;
+    for (const m of marks) {
+      const mid = Number(m.mid_sem ?? 0), internal = Number(m.internal_marks ?? 0), end = Number(m.end_sem ?? 0);
+      const total = mid + internal + end;
+      const [r] = await conn.execute(
+        `UPDATE marks SET mid_sem = ?, internal_marks = ?, end_sem = ?, marks_obtained = ?
+         WHERE student_id = ? AND schedule_id = ?`,
+        [mid, internal, end, total, m.student_id, schedule_id]
+      );
+      if (r.rowCount > 0) { updated += r.rowCount; continue; }
+      await conn.execute(
+        `INSERT INTO marks (schedule_id, student_id, mid_sem, internal_marks, end_sem, marks_obtained, max_marks)
+         VALUES (?, ?, ?, ?, ?, ?, 100)`,
+        [schedule_id, m.student_id, mid, internal, end, total]
+      );
+      inserted++;
+    }
+    await conn.commit();
 
     return res.json({
       success: true,
-      message: `Successfully updated and sealed marks for ${marks.length} students.`
+      message: `Marks saved for ${updated + inserted} students (${updated} updated, ${inserted} new). Grades and results are recalculated by the database.`
     });
   } catch (error) {
+    if (conn) await conn.rollback();
     next(error);
+  } finally {
+    if (conn) conn.release();
   }
 }
 
@@ -469,40 +554,141 @@ async function applyLeave(req, res, next) {
       return res.status(403).json({ success: false, message: 'Faculty ID not associated with account.' });
     }
 
-    const { leave_type, start_date, end_date, days_count, reason, cover_faculty } = req.body;
-    if (!leave_type || !start_date || !end_date) {
+    const { leave_type, start_date, end_date, reason, cover_faculty } = req.body;
+    if (!leave_type || !isDate(start_date) || !isDate(end_date)) {
+      return res.status(400).json({ success: false, message: 'Leave type and valid start/end dates (YYYY-MM-DD) are required.' });
+    }
+    if (end_date < start_date) {
+      return res.status(400).json({ success: false, message: 'End date cannot be before start date.' });
+    }
+    // days computed on the server, never trusted from the client
+    const days = Math.round((new Date(end_date) - new Date(start_date)) / 86400000) + 1;
+
+    // Overlap with an existing active leave
+    const [overlap] = await query(
+      `SELECT leave_code FROM faculty_leave
+       WHERE faculty_id = ? AND status NOT IN ('Cancelled', 'Rejected')
+         AND start_date <= ? AND end_date >= ? LIMIT 1`,
+      [facultyId, end_date, start_date]
+    );
+    if (overlap.length) {
+      return res.status(409).json({ success: false, message: `These dates overlap with leave ${overlap[0].leave_code}.` });
+    }
+
+    // Balance check (only if a balance row exists for this type/year)
+    const year = new Date(start_date).getFullYear();
+    const [bal] = await query(
+      `SELECT allotted, used FROM faculty_leave_balance WHERE faculty_id = ? AND leave_type = ? AND year = ?`,
+      [facultyId, leave_type, year]
+    );
+    if (bal.length && Number(bal[0].used) + days > Number(bal[0].allotted)) {
       return res.status(400).json({
         success: false,
-        message: 'Leave type, start date, and end date are required.'
+        message: `Insufficient ${leave_type} balance: ${Number(bal[0].allotted) - Number(bal[0].used)} day(s) left, ${days} requested.`
       });
     }
 
-    const leaveCode = `LV-2026-${Date.now().toString().slice(-4)}`;
+    const [seq] = await query(`SELECT nextval('faculty_leave_code_seq') AS n`);
+    const leaveCode = `LV-${year}-${String(seq[0].n).padStart(4, '0')}`;
 
-    await query(
+    const [ins] = await query(
       `INSERT INTO faculty_leave (leave_code, faculty_id, leave_type, start_date, end_date, days_count, reason, cover_faculty_name, status, applied_on)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Request Sent', CURRENT_DATE)`,
-      [leaveCode, facultyId, leave_type, start_date, end_date, days_count || 1, reason || 'Personal Leave', cover_faculty || null]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending Dean Review', CURRENT_DATE) RETURNING leave_id, applied_on`,
+      [leaveCode, facultyId, leave_type, start_date, end_date, days, reason || 'Personal Leave', cover_faculty || null]
     );
 
     res.status(201).json({
       success: true,
-      message: 'Leave application submitted successfully.',
+      message: 'Leave application submitted for approval.',
       data: {
-        id: leaveCode,
-        leave_code: leaveCode,
-        leave_type,
-        start_date,
-        end_date,
-        days_count,
-        reason,
-        cover_faculty,
-        status: 'Request Sent',
-        applied_on: new Date().toISOString().split('T')[0]
+        id: leaveCode, leave_id: ins[0].leave_id, leave_code: leaveCode, leave_type, start_date, end_date,
+        days_count: days, reason, cover_faculty, status: 'Pending Dean Review', applied_on: ins[0].applied_on
       }
     });
   } catch (error) {
     next(error);
+  }
+}
+
+/**
+ * Cancel own pending leave   PUT /api/faculty/leave/:code/cancel
+ */
+async function cancelLeave(req, res, next) {
+  try {
+    const facultyId = req.user.faculty_id;
+    if (!facultyId) {
+      return res.status(403).json({ success: false, message: 'Faculty ID not associated with account.' });
+    }
+    const [r] = await query(
+      `UPDATE faculty_leave SET status = 'Cancelled', approver_comments = 'Revoked by faculty applicant.'
+       WHERE leave_code = ? AND faculty_id = ? AND status IN ('Pending Dean Review', 'Request Sent')
+       RETURNING leave_code`,
+      [req.params.code, facultyId]
+    );
+    if (!r.length) {
+      return res.status(404).json({ success: false, message: 'Pending leave not found (only your own pending leaves can be cancelled).' });
+    }
+    res.json({ success: true, message: 'Leave cancelled.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * ADMIN: list leaves awaiting a decision   GET /api/faculty/leave/pending
+ */
+async function listPendingLeaves(req, res, next) {
+  try {
+    const [rows] = await query(
+      `SELECT l.leave_code, l.leave_type, l.start_date, l.end_date, l.days_count, l.reason, l.status, l.applied_on,
+              f.faculty_id, f.faculty_name
+       FROM faculty_leave l JOIN faculty f ON l.faculty_id = f.faculty_id
+       WHERE l.status IN ('Pending Dean Review', 'Request Sent')
+       ORDER BY l.applied_on ASC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * ADMIN: approve / reject   PUT /api/faculty/leave/:code/decision  { decision: 'Approved'|'Rejected', comments }
+ * Approval deducts the leave balance (if tracked).
+ */
+async function decideLeave(req, res, next) {
+  let conn;
+  try {
+    const { decision, comments } = req.body;
+    if (!['Approved', 'Rejected'].includes(decision)) {
+      return res.status(400).json({ success: false, message: "decision must be 'Approved' or 'Rejected'." });
+    }
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+    const [r] = await conn.execute(
+      `UPDATE faculty_leave SET status = ?, approver_comments = ?, approved_by = ?, approved_on = CURRENT_DATE
+       WHERE leave_code = ? AND status IN ('Pending Dean Review', 'Request Sent')
+       RETURNING faculty_id, leave_type, days_count, start_date`,
+      [decision, comments || null, req.user.id || null, req.params.code]
+    );
+    if (!r.length) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, message: 'Pending leave not found.' });
+    }
+    if (decision === 'Approved') {
+      await conn.execute(
+        `UPDATE faculty_leave_balance SET used = used + ?
+         WHERE faculty_id = ? AND leave_type = ? AND year = EXTRACT(YEAR FROM ?::date)::int`,
+        [r[0].days_count, r[0].faculty_id, r[0].leave_type, r[0].start_date]
+      );
+    }
+    await conn.commit();
+    res.json({ success: true, message: `Leave ${decision.toLowerCase()}.` });
+  } catch (error) {
+    if (conn) await conn.rollback();
+    next(error);
+  } finally {
+    if (conn) conn.release();
   }
 }
 
@@ -520,32 +706,44 @@ async function getPayroll(req, res, next) {
     const [payroll] = await query(
       `SELECT * FROM faculty_payroll
        WHERE faculty_id = ?
-       ORDER BY year DESC, month DESC`,
+       ORDER BY payroll_id DESC`,
       [facultyId]
     );
 
     res.json({
       success: true,
-      data: (payroll || []).map(p => ({
-        id: p.slip_id,
-        slip_id: p.slip_id,
-        month: p.month,
-        year: p.year,
-        basic_salary: Number(p.basic_salary),
-        da_allowance: Number(p.da_allowance),
-        hra_allowance: Number(p.hra_allowance),
-        travel_allowance: Number(p.travel_allowance),
-        academic_allowance: Number(p.academic_allowance),
-        gross_salary: Number(p.gross_salary),
-        pf_deduction: Number(p.pf_deduction),
-        income_tax: Number(p.income_tax),
-        professional_tax: Number(p.professional_tax),
-        total_deductions: Number(p.total_deductions),
-        net_salary: Number(p.net_salary),
-        disbursement_date: p.disbursement_date,
-        payment_mode: p.payment_mode,
-        status: p.status
-      }))
+      data: (payroll || []).map(p => {
+        const parts = (p.month_year || '').split(' ');
+        const month = p.month || parts[0] || 'October';
+        const year = p.year || parseInt(parts[1]) || 2026;
+        const basic = Number(p.basic_pay || p.basic_salary || 0);
+        const hra = Number(p.hra || p.hra_allowance || 0);
+        const da = Number(p.da || p.da_allowance || 0);
+        const gross = Number(p.gross_salary || (basic + hra + da));
+        const deductions = Number(p.deductions || p.total_deductions || 0);
+        const net = Number(p.net_salary || (gross - deductions));
+
+        return {
+          id: p.payroll_id || p.slip_id,
+          slip_id: p.slip_id || `PAY-${p.payroll_id}`,
+          month,
+          year,
+          basic_salary: basic,
+          da_allowance: da,
+          hra_allowance: hra,
+          travel_allowance: Number(p.travel_allowance || 0),
+          academic_allowance: Number(p.academic_allowance || 0),
+          gross_salary: gross,
+          pf_deduction: Number(p.pf_deduction || 0),
+          income_tax: Number(p.income_tax || 0),
+          professional_tax: Number(p.professional_tax || 0),
+          total_deductions: deductions,
+          net_salary: net,
+          disbursement_date: p.payment_date || p.disbursement_date,
+          payment_mode: p.payment_mode || 'NEFT / RTGS Online Transfer',
+          status: p.status || 'Paid'
+        };
+      })
     });
   } catch (error) {
     next(error);
@@ -570,7 +768,7 @@ async function getTimetable(req, res, next) {
        JOIN section sec ON t.section_id = sec.section_id
        JOIN department d ON sec.department_id = d.department_id
        WHERE t.faculty_id = ?
-       ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), t.start_time ASC`,
+       ORDER BY ${DAY_ORDER('t.day_of_week')}, t.start_time ASC`,
       [facultyId]
     );
 
@@ -606,6 +804,9 @@ async function createTimetableEntry(req, res, next) {
         success: false,
         message: 'section_id, subject_id, day_of_week, start_time, end_time, and room_no are required.'
       });
+    }
+    if (!isTime(start_time) || !isTime(end_time) || end_time <= start_time) {
+      return res.status(400).json({ success: false, message: 'Valid start_time and end_time (HH:MM) are required, and end must be after start.' });
     }
 
     // 1. Conflict Check: Section schedule overlap
@@ -656,16 +857,19 @@ async function createTimetableEntry(req, res, next) {
 
     const [result] = await query(
       `INSERT INTO timetable (section_id, subject_id, faculty_id, semester_id, day_of_week, start_time, end_time, room_no, timetable_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING timetable_id`,
       [section_id, subject_id, facultyId, semester_id || 5, day_of_week, start_time, end_time, room_no, timetable_type || 'Lecture']
     );
 
     res.status(201).json({
       success: true,
-      message: 'Timetable entry successfully created and committed to MySQL.',
-      timetable_id: result.insertId
+      message: 'Timetable entry created.',
+      timetable_id: result[0].timetable_id
     });
   } catch (error) {
+    if (error && /Timetable clash/i.test(error.message || '')) {
+      return res.status(409).json({ success: false, message: error.message });
+    }
     next(error);
   }
 }
@@ -696,18 +900,24 @@ async function updateTimetableEntry(req, res, next) {
       });
     }
 
-    await query(
+    const [upd] = await query(
       `UPDATE timetable 
        SET section_id = ?, subject_id = ?, semester_id = ?, day_of_week = ?, start_time = ?, end_time = ?, room_no = ?, timetable_type = ?
        WHERE timetable_id = ? AND faculty_id = ?`,
       [section_id, subject_id, semester_id || 5, day_of_week, start_time, end_time, room_no, timetable_type || 'Lecture', timetableId, facultyId]
     );
+    if (!upd.rowCount) {
+      return res.status(404).json({ success: false, message: 'Timetable entry not found (or not yours).' });
+    }
 
     res.json({
       success: true,
-      message: 'Timetable entry updated successfully in MySQL.'
+      message: 'Timetable entry updated.'
     });
   } catch (error) {
+    if (error && /Timetable clash/i.test(error.message || '')) {
+      return res.status(409).json({ success: false, message: error.message });
+    }
     next(error);
   }
 }
@@ -721,10 +931,13 @@ async function deleteTimetableEntry(req, res, next) {
     const timetableId = parseInt(req.params.id, 10);
     const facultyId = req.user.faculty_id;
 
-    await query(
+    const [del] = await query(
       `DELETE FROM timetable WHERE timetable_id = ? AND faculty_id = ?`,
       [timetableId, facultyId]
     );
+    if (!del.rowCount) {
+      return res.status(404).json({ success: false, message: 'Timetable entry not found (or not yours).' });
+    }
 
     res.json({
       success: true,
@@ -749,11 +962,10 @@ async function getStudentPreview(req, res, next) {
 
     const [students] = await query(
       `SELECT s.student_id, s.roll_no, s.prn, s.student_name, s.email, s.current_year, s.current_semester, s.branch,
-              d.department_name, sec.section_name, c.course_name
+              d.department_name, sec.section_name, ('B.Tech ' || COALESCE(s.branch, d.branch_code)) AS course_name
        FROM student s
        JOIN department d ON s.department_id = d.department_id
        LEFT JOIN section sec ON s.section_id = sec.section_id
-       LEFT JOIN course c ON c.department_id = s.department_id
        WHERE s.student_id = ?
        LIMIT 1`,
       [studentId]
@@ -767,7 +979,17 @@ async function getStudentPreview(req, res, next) {
 
     // Live attendance summary using view
     const [attendance] = await query(
-      `SELECT * FROM v_student_attendance_summary WHERE student_id = ?`,
+      `SELECT sub.subject_code, sub.subject_name,
+              COUNT(*) AS total_sessions,
+              COUNT(*) FILTER (WHERE ${ATT('ar')} IN ('Present', 'Late')) AS attended_sessions,
+              COUNT(*) FILTER (WHERE ${ATT('ar')} = 'Absent') AS absent_sessions,
+              COALESCE(ROUND(100.0 * COUNT(*) FILTER (WHERE ${ATT('ar')} IN ('Present', 'Late')) / NULLIF(COUNT(*), 0), 2), 0) AS attendance_pct
+       FROM attendance_record ar
+       JOIN attendance_session ses ON ar.session_id = ses.session_id
+       JOIN subject sub ON ses.subject_id = sub.subject_id
+       WHERE ar.student_id = ?
+       GROUP BY sub.subject_id, sub.subject_code, sub.subject_name
+       ORDER BY sub.subject_code`,
       [studentId]
     );
 
@@ -780,20 +1002,23 @@ async function getStudentPreview(req, res, next) {
        JOIN section sec ON t.section_id = sec.section_id
        JOIN student st ON st.section_id = t.section_id
        WHERE st.student_id = ?
-       ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), t.start_time`,
+       ORDER BY ${DAY_ORDER('t.day_of_week')}, t.start_time`,
       [studentId]
     );
 
     // Fee summary using view
     const [feeSummary] = await query(
-      `SELECT * FROM v_student_fee_balance WHERE student_id = ?`,
+      `SELECT COALESCE(SUM(amount_due), 0) AS total_invoiced,
+              COALESCE(SUM(amount_paid), 0) AS total_paid,
+              COALESCE(SUM(COALESCE(balance_amount, amount_due - COALESCE(scholarship_amount, 0) - amount_paid)), 0) AS outstanding_balance
+       FROM student_fee WHERE student_id = ?`,
       [studentId]
     );
 
     res.json({
       success: true,
       previewMode: true,
-      notice: 'READ-ONLY DEMONSTRATION PREVIEW - Passwords & Private Auth Tokens Protected',
+      notice: 'Read-only preview of this student record.',
       student,
       attendance: attendance || [],
       timetable: (timetable || []).map(t => ({
@@ -809,7 +1034,31 @@ async function getStudentPreview(req, res, next) {
   }
 }
 
+/**
+ * Colleagues of the logged-in faculty (same department) - used for the leave "cover" dropdown
+ * GET /api/faculty/colleagues
+ */
+async function getColleagues(req, res, next) {
+  try {
+    const facultyId = req.user.faculty_id;
+    if (!facultyId) {
+      return res.status(403).json({ success: false, message: 'Faculty access required.' });
+    }
+    const [rows] = await query(
+      `SELECT f.faculty_id, f.faculty_name, des.designation_name
+       FROM faculty f
+       LEFT JOIN designation des ON f.designation_id = des.designation_id
+       WHERE f.department_id = (SELECT department_id FROM faculty WHERE faculty_id = ?)
+         AND f.faculty_id <> ? AND COALESCE(f.status, 'Active') = 'Active'
+       ORDER BY f.faculty_name`,
+      [facultyId, facultyId]
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) { next(error); }
+}
+
 module.exports = {
+  getColleagues,
   getProfile,
   getDashboard,
   getAttendanceRoster,
@@ -823,5 +1072,8 @@ module.exports = {
   saveGrading,
   getLeave,
   applyLeave,
+  cancelLeave,
+  listPendingLeaves,
+  decideLeave,
   getPayroll
 };

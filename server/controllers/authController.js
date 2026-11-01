@@ -1,5 +1,16 @@
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../config/db');
+
+// user_account.is_active may be BOOLEAN or an integer flag depending on how the table was created
+let _activeLit = null;
+async function activeLiteral() {
+  if (_activeLit) return _activeLit;
+  try {
+    const [r] = await query("SELECT data_type FROM information_schema.columns WHERE table_name = 'user_account' AND column_name = 'is_active' AND table_schema = current_schema()");
+    _activeLit = r[0] && r[0].data_type === 'boolean' ? 'TRUE' : '1';
+  } catch (e) { _activeLit = '1'; }
+  return _activeLit;
+}
 const { generateToken } = require('../middleware/auth');
 
 /**
@@ -23,13 +34,12 @@ async function login(req, res, next) {
     const [rows] = await query(
       `SELECT u.user_id, u.identifier, u.email, u.password_hash, u.role, u.student_id, u.faculty_id, u.staff_id, u.is_active,
               s.student_name, s.roll_no, s.current_semester, s.branch,
-              d.department_name, c.course_name, sec.section_name,
+              d.department_name, ('B.Tech ' || COALESCE(s.branch, d.branch_code)) AS course_name, sec.section_name,
               f.faculty_name, u.identifier AS faculty_code, des.designation_name,
               COALESCE(st.staff_name, u.identifier) AS staff_name
        FROM user_account u
        LEFT JOIN student s ON u.student_id = s.student_id
        LEFT JOIN department d ON (s.department_id = d.department_id OR (u.faculty_id IS NOT NULL AND d.department_id = (SELECT department_id FROM faculty WHERE faculty_id = u.faculty_id)))
-       LEFT JOIN course c ON (c.department_id = s.department_id)
        LEFT JOIN section sec ON s.section_id = sec.section_id
        LEFT JOIN faculty f ON u.faculty_id = f.faculty_id
        LEFT JOIN staff st ON u.staff_id = st.staff_id
@@ -124,7 +134,7 @@ async function login(req, res, next) {
     if (isStaff) {
       const [staffRows] = await query(
         "SELECT staff_id, staff_name FROM staff WHERE staff_id = ?",
-        [user.staff_id || (user.user_id ? user.user_id - 20000 : 0)]
+        [user.staff_id || 0]
       );
       if (staffRows.length > 0) {
         staffName = staffRows[0].staff_name;
@@ -161,8 +171,7 @@ async function login(req, res, next) {
     });
 
     // Update last login timestamp
-    query('UPDATE user_account SET last_login = NOW() WHERE user_id = ?', [user.user_id]).catch(() => {});
-
+  
     return res.json({
       success: true,
       message: 'Login successful.',
@@ -186,10 +195,9 @@ async function getCurrentUser(req, res, next) {
       const [rows] = await query(
         `SELECT s.student_id, s.roll_no, s.prn, s.student_name, s.email, s.phone,
                 s.current_year, s.current_semester, s.branch,
-                d.department_name, c.course_name, sec.section_name
+                d.department_name, ('B.Tech ' || COALESCE(s.branch, d.branch_code)) AS course_name, sec.section_name
          FROM student s
          JOIN department d ON s.department_id = d.department_id
-         LEFT JOIN course c ON c.department_id = s.department_id
          LEFT JOIN section sec ON s.section_id = sec.section_id
          WHERE s.student_id = ?
          LIMIT 1`,
@@ -378,7 +386,7 @@ async function registerStudent(req, res, next) {
     const [existingUsers] = await query(
       `SELECT identifier, email FROM user_account WHERE identifier = ? OR email = ?
        UNION
-       SELECT roll_no, email FROM student WHERE roll_no = ? OR email = ?`,
+       SELECT roll_no::text, email FROM student WHERE roll_no::text = ? OR email = ?`,
       [trimmedRoll, trimmedEmail, trimmedRoll, trimmedEmail]
     );
 
@@ -411,6 +419,11 @@ async function registerStudent(req, res, next) {
       finalSectionId = secRows[0]?.section_id || 1;
     }
 
+    // admission year follows from the year of study (academic year starts in July)
+    const now = new Date();
+    const academicStart = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+    const batchYear = academicStart - ((parseInt(current_year, 10) || 3) - 1);
+
     // 4. Secure Bcrypt Hash
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -424,7 +437,8 @@ async function registerStudent(req, res, next) {
         email, phone, branch, department_id, section_id,
         batch_year, current_year, current_semester, dob, gender,
         admission_year, admission_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
+      RETURNING student_id`,
       [
         finalPrn,
         trimmedRoll,
@@ -437,21 +451,21 @@ async function registerStudent(req, res, next) {
         branchCode,
         dept.department_id,
         finalSectionId,
-        2024,
+        batchYear,
         current_year || 3,
         current_semester || 5,
         dob || '2004-01-01',
         gender && ['Male', 'Female', 'Other'].includes(gender) ? gender : 'Other',
-        2024
+        batchYear
       ]
     );
 
-    const newStudentId = stInsert.insertId;
+    const newStudentId = stInsert[0].student_id;
 
     // Create user_account record (Strictly enforce STUDENT role)
     await conn.execute(
       `INSERT INTO user_account (identifier, email, password_hash, role, student_id, is_active)
-       VALUES (?, ?, ?, 'STUDENT', ?, 1)`,
+       VALUES (?, ?, ?, 'STUDENT', ?, ${await activeLiteral()})`,
       [trimmedRoll, trimmedEmail, passwordHash, newStudentId]
     );
 
@@ -466,7 +480,7 @@ async function registerStudent(req, res, next) {
 
     return res.status(201).json({
       success: true,
-      message: 'Student account successfully registered in MySQL! You can now log in.',
+      message: 'Student account successfully registered! You can now log in.',
       student: {
         id: newStudentId,
         student_id: newStudentId,
@@ -551,7 +565,7 @@ async function registerFaculty(req, res, next) {
 
     let finalDesigId = designation_id ? parseInt(designation_id, 10) : null;
     if (!finalDesigId) {
-      const [desigRows] = await query("SELECT designation_id FROM designation WHERE designation_name LIKE '%Assistant%' LIMIT 1");
+      const [desigRows] = await query("SELECT designation_id FROM designation WHERE designation_name ILIKE '%Assistant%' LIMIT 1");
       finalDesigId = desigRows[0]?.designation_id || 1;
     }
 
@@ -580,16 +594,17 @@ async function registerFaculty(req, res, next) {
 
     const [facInsert] = await conn.execute(
       `INSERT INTO faculty (faculty_name, faculty_code, email, phone_no, department_id, designation_id, qualification, joining_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), 'Active')`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, 'Active')
+       RETURNING faculty_id`,
       [trimmedName, trimmedCode, trimmedEmail, phone_no || null, department_id, finalDesigId, qualification || 'M.Tech / Ph.D.']
     );
 
-    const newFacultyId = facInsert.insertId;
+    const newFacultyId = facInsert[0].faculty_id;
 
     // Insert user_account (Strictly enforce FACULTY role)
     await conn.execute(
       `INSERT INTO user_account (identifier, email, password_hash, role, faculty_id, is_active)
-       VALUES (?, ?, ?, 'FACULTY', ?, 1)`,
+       VALUES (?, ?, ?, 'FACULTY', ?, ${await activeLiteral()})`,
       [trimmedCode, trimmedEmail, passwordHash, newFacultyId]
     );
 
@@ -597,7 +612,7 @@ async function registerFaculty(req, res, next) {
 
     return res.status(201).json({
       success: true,
-      message: 'Faculty account registered and authorized in MySQL! You can now log in.',
+      message: 'Faculty account registered and authorized! You can now log in.',
       faculty: {
         id: newFacultyId,
         faculty_id: newFacultyId,

@@ -138,13 +138,13 @@ export const StudentPlacementPage: React.FC = () => {
     {
       header: "Eligibility Criteria",
       accessor: "min_cgpa",
-      render: (j) => <span className="font-mono text-xs">Min CGPA: <strong>{Number(j.min_cgpa || 6.5).toFixed(1)}</strong></span>
+      render: (j) => <span className="font-mono text-xs">Min CGPA: <strong>{Number(j.min_cgpa || 0).toFixed(1)}</strong></span>
     },
     { header: "Drive Date", accessor: "drive_date", render: (j) => <span className="font-mono text-slate-600">{j.drive_date}</span> },
     {
       header: "Action",
       render: (j) => {
-        const alreadyApplied = myApplications.some(a => a.drive_id === j.drive_id || a.company_name.toLowerCase() === j.company_name.toLowerCase());
+        const alreadyApplied = myApplications.some(a => a.drive_id === j.drive_id);
         if (alreadyApplied) {
           return (
             <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1 w-fit">

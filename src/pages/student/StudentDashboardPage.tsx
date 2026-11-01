@@ -27,40 +27,32 @@ import { api } from '../../services/api';
 // Visual Analytics Components
 import { AttendanceDonutChart } from '../../components/analytics/AttendanceDonutChart';
 import { SemesterPerformanceChart } from '../../components/analytics/SemesterPerformanceChart';
-import { ExamComparisonBarChart } from '../../components/analytics/ExamComparisonBarChart';
 import { WeeklyAttendanceTrendChart } from '../../components/analytics/WeeklyAttendanceTrendChart';
 import { SubjectAttendanceAlerts } from '../../components/analytics/SubjectAttendanceAlerts';
 
 // Analytics Data Fallback Service
-import { 
-  getAttendanceDistribution,
-  getSemesterPerformanceTrend,
-  getExaminationComparisonData,
-  getWeeklyAttendanceTrend,
-  getSubjectAttendanceAlerts,
-  INSTITUTION_ATTENDANCE_THRESHOLD
-} from '../../data/studentAnalyticsData';
+import { INSTITUTION_ATTENDANCE_THRESHOLD, SubjectAttendanceAlert } from '../../data/studentAnalyticsData';
 
 export const StudentDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Fallback defaults
-  const attendanceDist = getAttendanceDistribution();
-  const examComparison = getExaminationComparisonData();
-  const weeklyAttendance = getWeeklyAttendanceTrend();
-  const attendanceAlerts = getSubjectAttendanceAlerts();
+  const [resultRows, setResultRows] = useState<any[]>([]);
 
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       try {
         setLoading(true);
-        const res = await api.getStudentDashboard();
+        const [res, resRes] = await Promise.all([
+          api.getStudentDashboard(),
+          api.getStudentResults().catch(() => null)
+        ]);
         if (isMounted && res.success && res.data) {
           setDashboardData(res.data);
         }
+        if (isMounted && resRes?.success) setResultRows(resRes.data?.results || []);
       } catch (err) {
         console.warn('Could not fetch student dashboard:', err);
       } finally {
@@ -68,49 +60,55 @@ export const StudentDashboardPage: React.FC = () => {
       }
     }
     loadData();
-    return () => { isMounted = false; };
+    // other portals (faculty marks attendance, staff post fees/fines) change this data - refresh every 30s
+    const timer = setInterval(() => { api.getStudentDashboard().then(r => { if (isMounted && r.success) setDashboardData(r.data); }).catch(() => {}); }, 30000);
+    return () => { isMounted = false; clearInterval(timer); };
   }, []);
 
-  // Compute dynamic stats from authenticated student's database record
-  const sgpa = dashboardData?.sgpa !== undefined ? Number(dashboardData.sgpa) : 7.5;
-  const cgpa = dashboardData?.cgpa !== undefined ? Number(dashboardData.cgpa) : 7.2;
-  const attPct = dashboardData?.overallAttendance?.percentage !== undefined ? Number(dashboardData.overallAttendance.percentage) : 88.0;
-  const attendedClasses = dashboardData?.overallAttendance?.attendedClasses !== undefined ? Number(dashboardData.overallAttendance.attendedClasses) : 9;
-  const totalClasses = dashboardData?.overallAttendance?.totalClasses !== undefined ? Number(dashboardData.overallAttendance.totalClasses) : 10;
-  const isMeetingRequirement = attPct >= 75;
+  // Everything below comes from the database; a student with no data sees zeros / empty states, never invented numbers
+  const sgpa: number | null = dashboardData?.sgpa != null ? Number(dashboardData.sgpa) : null;
+  const cgpa: number | null = dashboardData?.cgpa != null ? Number(dashboardData.cgpa) : null;
+  const fmt2 = (n: number | null) => (n === null ? '—' : n.toFixed(2));
+  const attPct = Number(dashboardData?.overallAttendance?.percentage || 0);
+  const attendedClasses = Number(dashboardData?.overallAttendance?.attendedClasses || 0);
+  const totalClasses = Number(dashboardData?.overallAttendance?.totalClasses || 0);
+  const hasAttendance = totalClasses > 0;
+  const isMeetingRequirement = !hasAttendance || attPct >= INSTITUTION_ATTENDANCE_THRESHOLD;
+  const semNo = dashboardData?.semester ?? user?.semester ?? '';
 
-  const currentDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()];
-  const allWeeklyClasses = dashboardData?.classes || [];
-  const matchedTodayClasses = allWeeklyClasses.filter((c: any) => c.day === currentDayName || c.day_of_week === currentDayName);
-  const todayClasses = matchedTodayClasses.length > 0 
-    ? matchedTodayClasses 
-    : (allWeeklyClasses.filter((c: any) => c.day === 'Monday').length > 0 
-        ? allWeeklyClasses.filter((c: any) => c.day === 'Monday') 
-        : [
-            { time: "09:00 AM - 10:00 AM", subject: "Data Structures & Algorithms", faculty: "Prof. Ashwini Nair", room: "AB-301", type: "Lecture" },
-            { time: "10:15 AM - 11:15 AM", subject: "Database Management Systems", faculty: "Prof. Arvind Sharma", room: "AB-301", type: "Lecture" },
-            { time: "11:15 AM - 12:15 PM", subject: "Computer Networks", faculty: "Prof. S. R. Patil", room: "AB-301", type: "Lecture" },
-            { time: "01:15 PM - 03:15 PM", subject: "DBMS & SQL Laboratory", faculty: "Prof. Arvind Sharma", room: "Lab 304", type: "Lab" },
-            { time: "03:15 PM - 04:00 PM", subject: "Algorithms Problem Solving", faculty: "Prof. Ashwini Nair", room: "AB-301", type: "Tutorial" }
-          ]);
+  const todayClasses: any[] = dashboardData?.classes || [];
+  const classesDay: string = dashboardData?.classes_day || 'today';
 
-  const dynamicAttendanceItems = dashboardData?.subjectAttendance && dashboardData.subjectAttendance.length > 0
-    ? dashboardData.subjectAttendance.map((s: any) => ({
-        name: s.code,
-        subject: s.name,
-        percentage: s.percentage,
-        attended: s.attended,
-        total: s.total,
-        color: s.percentage >= 75 ? '#2ECC71' : '#FF6B4A'
-      }))
-    : attendanceDist.items;
+  const dynamicAttendanceItems = (dashboardData?.subjectAttendance || []).map((s: any) => ({
+    name: s.code,
+    subject: s.name,
+    percentage: s.percentage,
+    attended: s.attended,
+    total: s.total,
+    color: s.percentage >= 75 ? '#2ECC71' : '#FF6B4A'
+  }));
 
-  const dynamicSemesterTrend = [
-    { semester: "Sem 1", sgpa: Math.max(5.0, Number((cgpa - 0.2).toFixed(2))), cgpa: Math.max(5.0, Number((cgpa - 0.2).toFixed(2))), credits: 22, status: 'Completed' as const, academicYear: '2024-25' },
-    { semester: "Sem 2", sgpa: Math.max(5.0, Number((cgpa - 0.1).toFixed(2))), cgpa: Math.max(5.0, Number((cgpa - 0.15).toFixed(2))), credits: 24, status: 'Completed' as const, academicYear: '2024-25' },
-    { semester: "Sem 3", sgpa: Math.max(5.0, Number((cgpa + 0.1).toFixed(2))), cgpa: Math.max(5.0, Number((cgpa - 0.05).toFixed(2))), credits: 22, status: 'Completed' as const, academicYear: '2025-26' },
-    { semester: `Sem ${user?.semester || 5}`, sgpa: sgpa, cgpa: cgpa, credits: 24, status: 'Completed' as const, academicYear: '2026-27' },
-  ];
+  const attendanceAlerts: SubjectAttendanceAlert[] = (dashboardData?.subjectAttendance || []).map((s: any) => {
+    const threshold = INSTITUTION_ATTENDANCE_THRESHOLD;
+    const pct = Number(s.percentage || 0);
+    const need = pct < threshold ? Math.max(1, Math.ceil((threshold / 100 * s.total - s.attended) / (1 - threshold / 100))) : 0;
+    const severity: 'green' | 'amber' | 'red' = pct < threshold ? 'red' : pct < threshold + 5 ? 'amber' : 'green';
+    return {
+      code: s.code, name: s.name, attended: s.attended, total: s.total, percentage: pct, threshold, severity,
+      classesNeededToRecover: need, faculty: '',
+      warningMessage: severity === 'red' ? `Below required ${threshold}%. Attend the next ${need} consecutive classes to avoid exam debarment.`
+        : severity === 'amber' ? `Borderline attendance (${pct}%). Within 5% of the ${threshold}% threshold.` : undefined
+    };
+  });
+
+  const dynamicSemesterTrend = resultRows.map((r: any) => ({
+    semester: `Sem ${r.semester_number}`,
+    sgpa: r.sgpa != null ? Number(r.sgpa) : null,
+    cgpa: r.cgpa != null ? Number(r.cgpa) : null,
+    credits: 0,
+    status: 'Completed' as const,
+    academicYear: r.academic_year || ''
+  }));
 
   return (
     <div className="space-y-6">
@@ -130,20 +128,20 @@ export const StudentDashboardPage: React.FC = () => {
             Welcome back, {user?.name || "Student"}
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-[#718096] leading-relaxed font-sans">
-            <span className="font-mono font-semibold text-[#2C3E50]">{user?.codeOrRoll}</span> • {user?.programOrDesignation} • Semester {user?.semester || 5} ({user?.section || 'Section 1'})
+            <span className="font-mono font-semibold text-[#2C3E50]">{user?.codeOrRoll}</span> • {user?.programOrDesignation} • Semester {semNo} ({user?.section || '—'})
           </p>
 
           {/* Quick Notice Pills */}
           <div className="mt-4 flex flex-wrap items-center gap-2.5 text-xs">
             <span className="flex items-center gap-1.5 bg-[#F4F7FC] px-3 py-1.5 rounded-full border border-slate-200/60 text-[#2C3E50] font-medium">
               <Clock className="w-3.5 h-3.5 text-[#4D8DFF]" />
-              Schedule: <strong className="font-semibold">{todayClasses[0]?.subject} ({todayClasses[0]?.time})</strong>
+              Schedule: <strong className="font-semibold">{todayClasses[0] ? `${todayClasses[0].subject} (${todayClasses[0].time})` : 'No classes scheduled'}</strong>
             </span>
             <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold ${
               isMeetingRequirement ? 'bg-emerald-50 border-emerald-100 text-[#2ECC71]' : 'bg-rose-50 border-rose-100 text-[#FF6B4A]'
             }`}>
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Aggregate Attendance: <strong>{attPct}%</strong>
+              Aggregate Attendance: <strong>{hasAttendance ? `${attPct}%` : 'No sessions yet'}</strong>
             </span>
           </div>
         </div>
@@ -159,14 +157,14 @@ export const StudentDashboardPage: React.FC = () => {
         {/* Card 1 — Current SGPA */}
         <StatCard
           title="Current SGPA"
-          value={sgpa.toFixed(2)}
-          subtitle={`Semester ${user?.semester || 5} Grade Point`}
-          change={`Cumulative CGPA: ${cgpa.toFixed(2)}`}
-          trend={sgpa >= 7.0 ? "up" : "neutral"}
+          value={fmt2(sgpa)}
+          subtitle={semNo ? `Latest published result` : 'No result published yet'}
+          change={`Cumulative CGPA: ${fmt2(cgpa)}`}
+          trend={sgpa !== null && sgpa >= 7.0 ? "up" : "neutral"}
           iconName="Award"
           badge={
             <span className="text-[10px] font-bold text-[#4D8DFF] bg-[#E8F0FE] px-2 py-0.5 rounded-full">
-              CGPA {cgpa.toFixed(2)}
+              CGPA {fmt2(cgpa)}
             </span>
           }
         />
@@ -174,7 +172,7 @@ export const StudentDashboardPage: React.FC = () => {
         {/* Card 2 — Overall Attendance */}
         <StatCard
           title="Overall Attendance"
-          value={`${attPct}%`}
+          value={hasAttendance ? `${attPct}%` : '—'}
           subtitle={`${attendedClasses} / ${totalClasses} classes attended`}
           change={
             isMeetingRequirement 
@@ -214,9 +212,9 @@ export const StudentDashboardPage: React.FC = () => {
         {/* Card 4 — Examination Applications */}
         <StatCard
           title="Exam Applications"
-          value={dashboardData?.pendingApplications ? `${dashboardData.pendingApplications} In Review` : "Verified"}
+          value={dashboardData?.pendingApplications ? `${dashboardData.pendingApplications} In Review` : "None pending"}
           subtitle="Controller of Examinations"
-          change="Hall ticket verified for exam season"
+          change={dashboardData?.pendingApplications ? "Awaiting verification" : "No open applications"}
           trend="neutral"
           iconName="FileCheck2"
           badge={
@@ -234,37 +232,34 @@ export const StudentDashboardPage: React.FC = () => {
           overallPercentage={attPct}
           totalClasses={totalClasses}
           attendedClasses={attendedClasses}
-          missedClasses={totalClasses - attendedClasses}
+          missedClasses={Number(dashboardData?.overallAttendance?.missedClasses || 0)}
           requiredThreshold={INSTITUTION_ATTENDANCE_THRESHOLD}
         />
 
         <SemesterPerformanceChart
           data={dynamicSemesterTrend}
-          currentCgpa={cgpa}
-        />
-      </div>
-
-      {/* 4. Examination Comparison Bar Chart */}
-      <div>
-        <ExamComparisonBarChart
-          data={examComparison}
+          currentCgpa={cgpa ?? 0}
         />
       </div>
 
       {/* 5. Weekly Attendance Trend Line Chart */}
-      <div>
-        <WeeklyAttendanceTrendChart
-          data={weeklyAttendance}
-          threshold={INSTITUTION_ATTENDANCE_THRESHOLD}
-        />
-      </div>
+      {(dashboardData?.weeklyAttendance || []).length > 0 && (
+        <div>
+          <WeeklyAttendanceTrendChart
+            data={dashboardData.weeklyAttendance}
+            threshold={INSTITUTION_ATTENDANCE_THRESHOLD}
+          />
+        </div>
+      )}
 
       {/* 6. Subject-Wise Attendance Alerts */}
-      <div>
-        <SubjectAttendanceAlerts
-          alerts={attendanceAlerts}
-        />
-      </div>
+      {attendanceAlerts.length > 0 && (
+        <div>
+          <SubjectAttendanceAlerts
+            alerts={attendanceAlerts}
+          />
+        </div>
+      )}
 
       {/* 7. Upcoming Examinations, Today's Schedule & Relevant Academic Information */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -288,6 +283,9 @@ export const StudentDashboardPage: React.FC = () => {
             </div>
 
             <div className="space-y-3">
+              {todayClasses.length === 0 && (
+                <p className="text-xs text-[#718096] p-4 text-center">No classes are scheduled for your section on {classesDay}.</p>
+              )}
               {todayClasses.map((item: any, idx: number) => (
                 <div 
                   key={idx} 

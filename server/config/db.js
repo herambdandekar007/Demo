@@ -18,11 +18,28 @@ const isPostgres = Boolean(
 let pool;
 let isPostgresMode = false;
 
+// pg returns rows only; attach rowCount/affectedRows so UPDATE/DELETE results can be checked
+function withMeta(res) {
+  const rows = res.rows;
+  rows.rowCount = res.rowCount;
+  rows.affectedRows = res.rowCount;
+  return rows;
+}
+
 if (isPostgres) {
   const { Pool } = require('pg');
   isPostgresMode = true;
+
+  // Supabase pooler port 5432 is Session mode (capped at 15 clients across all team members).
+  // If pooler port 5432 is specified, route to port 6543 (Supabase Transaction mode pooler / Supavisor),
+  // which supports 10,000+ concurrent clients and prevents EMAXCONNSESSION errors.
+  let connectionString = process.env.DATABASE_URL;
+  if (connectionString && connectionString.includes('.pooler.supabase.com:5432')) {
+    connectionString = connectionString.replace(':5432', ':6543');
+  }
+
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
     ssl: { rejectUnauthorized: false },
     max: parseInt(process.env.DB_CONNECTION_LIMIT || '10', 10),
     idleTimeoutMillis: 30000,
@@ -36,13 +53,13 @@ if (isPostgres) {
         let paramIndex = 1;
         const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
         const res = await client.query(pgSql, params);
-        return [res.rows, res.fields];
+        return [withMeta(res), res.fields];
       },
       query: async (sql, params = []) => {
         let paramIndex = 1;
         const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
         const res = await client.query(pgSql, params);
-        return [res.rows, res.fields];
+        return [withMeta(res), res.fields];
       },
       beginTransaction: async () => client.query('BEGIN'),
       commit: async () => client.query('COMMIT'),
@@ -79,7 +96,7 @@ async function query(sql, params = []) {
     let paramIndex = 1;
     const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
     const res = await pool.query(pgSql, params);
-    return [res.rows, res.fields];
+    return [withMeta(res), res.fields];
   } else {
     return pool.execute(sql, params);
   }
@@ -114,7 +131,22 @@ async function checkDbConnection() {
   }
 }
 
+// Cached list of a table's real columns, so code can adapt to the live schema
+// (e.g. book.shelf_no vs book.shelf_location) instead of crashing on a missing column.
+const _colCache = new Map();
+async function tableColumns(table) {
+  if (_colCache.has(table)) return _colCache.get(table);
+  const [rows] = await query(
+    "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ?",
+    [table]
+  );
+  const set = new Set(rows.map(r => r.column_name));
+  if (set.size) _colCache.set(table, set); // do not cache "table missing"
+  return set;
+}
+
 module.exports = {
+  tableColumns,
   pool,
   query,
   checkDbConnection,

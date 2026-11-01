@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   GraduationCap, 
   Briefcase, 
@@ -199,6 +199,14 @@ export const LoginPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
+                  onClick={() => handleQuickFill('21001', 'Aryan@21001')}
+                  className="col-span-2 px-2 py-1 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-800 border border-orange-300 hover:bg-orange-100 transition-colors text-left"
+                  title="21001: Aryan Mehta (CSE 2nd Year, Semester 3 — Batch 2025-2029)"
+                >
+                  21001 - Aryan Mehta (2nd Year · Sem 3)
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleQuickFill('31001', 'Kavya@31001')}
                   className="px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 transition-colors text-left"
                   title="31001: Kavya (CSE, SGPA 8.45, 92.5% Attendance, Full Fee Paid)"
@@ -388,15 +396,6 @@ export const LoginPage: React.FC = () => {
             </div>
           </form>
 
-          {/* Registration Link */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-slate-600">
-              New student or faculty?{' '}
-              <Link to="/register" className="font-bold text-[#4D8DFF] hover:underline">
-                Register Account
-              </Link>
-            </p>
-          </div>
 
           {/* Footer */}
           <div className="mt-5 pt-4 border-t border-slate-100 text-center">

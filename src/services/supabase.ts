@@ -228,6 +228,67 @@ export const MASTER_FACULTY_TIMETABLE_VARUN = [
   { day: 'Saturday', day_of_week: 'Saturday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'Hardware Hackathon & IoT Sprint Lab (EC-HACK)', subject_name: 'Hardware Hackathon & IoT Sprint Lab', subject_code: 'EC-HACK', faculty: 'Prof. Varun Pawar', faculty_name: 'Prof. Varun Pawar', room: 'Innovation Hub', room_no: 'Innovation Hub', classSection: 'B.Tech CSE - Section A', section_name: 'Section A (Div 1)', type: 'Workshop', timetable_type: 'Workshop', status: 'Upcoming' }
 ];
 
+// =============================================================================
+// SECOND YEAR (SEM 3) — B.Tech CSE TIMETABLE (Section B, Monday to Saturday)
+// =============================================================================
+export const MASTER_SEM3_TIMETABLE = [
+  // MONDAY
+  { day: 'Monday', day_of_week: 'Monday', time: '09:00 AM - 10:00 AM', start_time: '09:00:00', end_time: '10:00:00', subject: 'Engineering Mathematics III', subject_name: 'Engineering Mathematics III', code: 'CS201', subject_code: 'CS201', faculty: 'Prof. Meera Joshi', faculty_name: 'Prof. Meera Joshi', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Monday', day_of_week: 'Monday', time: '10:15 AM - 11:15 AM', start_time: '10:15:00', end_time: '11:15:00', subject: 'Object Oriented Programming', subject_name: 'Object Oriented Programming', code: 'CS202', subject_code: 'CS202', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Monday', day_of_week: 'Monday', time: '11:15 AM - 12:15 PM', start_time: '11:15:00', end_time: '12:15:00', subject: 'Digital Electronics', subject_name: 'Digital Electronics', code: 'CS203', subject_code: 'CS203', faculty: 'Prof. Sunita Rao', faculty_name: 'Prof. Sunita Rao', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Monday', day_of_week: 'Monday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'OOP Lab', subject_name: 'OOP Lab', code: 'CS202-P', subject_code: 'CS202-P', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'Lab 202', room_no: 'Lab 202', type: 'Lab', timetable_type: 'Lab', section_name: 'Section B (Div 2)' },
+  { day: 'Monday', day_of_week: 'Monday', time: '03:15 PM - 04:00 PM', start_time: '15:15:00', end_time: '16:00:00', subject: 'Maths Tutorial', subject_name: 'Engineering Mathematics III Tutorial', code: 'CS201-T', subject_code: 'CS201-T', faculty: 'Prof. Meera Joshi', faculty_name: 'Prof. Meera Joshi', room: 'AB-201', room_no: 'AB-201', type: 'Tutorial', timetable_type: 'Tutorial', section_name: 'Section B (Div 2)' },
+  // TUESDAY
+  { day: 'Tuesday', day_of_week: 'Tuesday', time: '09:00 AM - 10:00 AM', start_time: '09:00:00', end_time: '10:00:00', subject: 'Discrete Mathematics', subject_name: 'Discrete Mathematics', code: 'CS204', subject_code: 'CS204', faculty: 'Prof. Anil Kulkarni', faculty_name: 'Prof. Anil Kulkarni', room: 'AB-202', room_no: 'AB-202', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Tuesday', day_of_week: 'Tuesday', time: '10:15 AM - 11:15 AM', start_time: '10:15:00', end_time: '11:15:00', subject: 'Computer Organization & Architecture', subject_name: 'Computer Organization & Architecture', code: 'CS205', subject_code: 'CS205', faculty: 'Prof. Vinod Sharma', faculty_name: 'Prof. Vinod Sharma', room: 'AB-202', room_no: 'AB-202', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Tuesday', day_of_week: 'Tuesday', time: '11:15 AM - 12:15 PM', start_time: '11:15:00', end_time: '12:15:00', subject: 'Object Oriented Programming', subject_name: 'Object Oriented Programming', code: 'CS202', subject_code: 'CS202', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'AB-202', room_no: 'AB-202', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Tuesday', day_of_week: 'Tuesday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'Digital Electronics Lab', subject_name: 'Digital Electronics Lab', code: 'CS203-P', subject_code: 'CS203-P', faculty: 'Prof. Sunita Rao', faculty_name: 'Prof. Sunita Rao', room: 'Lab 203', room_no: 'Lab 203', type: 'Lab', timetable_type: 'Lab', section_name: 'Section B (Div 2)' },
+  { day: 'Tuesday', day_of_week: 'Tuesday', time: '03:15 PM - 04:00 PM', start_time: '15:15:00', end_time: '16:00:00', subject: 'Discrete Maths Tutorial', subject_name: 'Discrete Mathematics Tutorial', code: 'CS204-T', subject_code: 'CS204-T', faculty: 'Prof. Anil Kulkarni', faculty_name: 'Prof. Anil Kulkarni', room: 'AB-202', room_no: 'AB-202', type: 'Tutorial', timetable_type: 'Tutorial', section_name: 'Section B (Div 2)' },
+  // WEDNESDAY
+  { day: 'Wednesday', day_of_week: 'Wednesday', time: '09:00 AM - 10:00 AM', start_time: '09:00:00', end_time: '10:00:00', subject: 'Computer Organization & Architecture', subject_name: 'Computer Organization & Architecture', code: 'CS205', subject_code: 'CS205', faculty: 'Prof. Vinod Sharma', faculty_name: 'Prof. Vinod Sharma', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Wednesday', day_of_week: 'Wednesday', time: '10:15 AM - 11:15 AM', start_time: '10:15:00', end_time: '11:15:00', subject: 'Engineering Mathematics III', subject_name: 'Engineering Mathematics III', code: 'CS201', subject_code: 'CS201', faculty: 'Prof. Meera Joshi', faculty_name: 'Prof. Meera Joshi', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Wednesday', day_of_week: 'Wednesday', time: '11:15 AM - 12:15 PM', start_time: '11:15:00', end_time: '12:15:00', subject: 'Discrete Mathematics', subject_name: 'Discrete Mathematics', code: 'CS204', subject_code: 'CS204', faculty: 'Prof. Anil Kulkarni', faculty_name: 'Prof. Anil Kulkarni', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Wednesday', day_of_week: 'Wednesday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'COA Lab', subject_name: 'Computer Organization & Architecture Lab', code: 'CS205-P', subject_code: 'CS205-P', faculty: 'Prof. Vinod Sharma', faculty_name: 'Prof. Vinod Sharma', room: 'Lab 204', room_no: 'Lab 204', type: 'Lab', timetable_type: 'Lab', section_name: 'Section B (Div 2)' },
+  { day: 'Wednesday', day_of_week: 'Wednesday', time: '03:15 PM - 04:00 PM', start_time: '15:15:00', end_time: '16:00:00', subject: 'Faculty Mentorship', subject_name: 'Faculty Mentorship & Doubts Session', code: 'CS-MENT2', subject_code: 'CS-MENT2', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'AB-201', room_no: 'AB-201', type: 'Mentorship', timetable_type: 'Mentorship', section_name: 'Section B (Div 2)' },
+  // THURSDAY
+  { day: 'Thursday', day_of_week: 'Thursday', time: '09:00 AM - 10:00 AM', start_time: '09:00:00', end_time: '10:00:00', subject: 'Digital Electronics', subject_name: 'Digital Electronics', code: 'CS203', subject_code: 'CS203', faculty: 'Prof. Sunita Rao', faculty_name: 'Prof. Sunita Rao', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Thursday', day_of_week: 'Thursday', time: '10:15 AM - 11:15 AM', start_time: '10:15:00', end_time: '11:15:00', subject: 'Computer Organization & Architecture', subject_name: 'Computer Organization & Architecture', code: 'CS205', subject_code: 'CS205', faculty: 'Prof. Vinod Sharma', faculty_name: 'Prof. Vinod Sharma', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Thursday', day_of_week: 'Thursday', time: '11:15 AM - 12:15 PM', start_time: '11:15:00', end_time: '12:15:00', subject: 'Engineering Mathematics III', subject_name: 'Engineering Mathematics III', code: 'CS201', subject_code: 'CS201', faculty: 'Prof. Meera Joshi', faculty_name: 'Prof. Meera Joshi', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Thursday', day_of_week: 'Thursday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'Mini Project Lab', subject_name: 'Mini Project Lab', code: 'CS-PROJ2', subject_code: 'CS-PROJ2', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'Project Lab 1', room_no: 'Project Lab 1', type: 'Lab', timetable_type: 'Lab', section_name: 'Section B (Div 2)' },
+  { day: 'Thursday', day_of_week: 'Thursday', time: '03:15 PM - 04:00 PM', start_time: '15:15:00', end_time: '16:00:00', subject: 'OOP Tutorial', subject_name: 'Object Oriented Programming Tutorial', code: 'CS202-T', subject_code: 'CS202-T', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'AB-201', room_no: 'AB-201', type: 'Tutorial', timetable_type: 'Tutorial', section_name: 'Section B (Div 2)' },
+  // FRIDAY
+  { day: 'Friday', day_of_week: 'Friday', time: '09:00 AM - 10:00 AM', start_time: '09:00:00', end_time: '10:00:00', subject: 'Object Oriented Programming', subject_name: 'Object Oriented Programming', code: 'CS202', subject_code: 'CS202', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Friday', day_of_week: 'Friday', time: '10:15 AM - 11:15 AM', start_time: '10:15:00', end_time: '11:15:00', subject: 'Engineering Mathematics III', subject_name: 'Engineering Mathematics III', code: 'CS201', subject_code: 'CS201', faculty: 'Prof. Meera Joshi', faculty_name: 'Prof. Meera Joshi', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Friday', day_of_week: 'Friday', time: '11:15 AM - 12:15 PM', start_time: '11:15:00', end_time: '12:15:00', subject: 'Digital Electronics', subject_name: 'Digital Electronics', code: 'CS203', subject_code: 'CS203', faculty: 'Prof. Sunita Rao', faculty_name: 'Prof. Sunita Rao', room: 'AB-201', room_no: 'AB-201', type: 'Lecture', timetable_type: 'Lecture', section_name: 'Section B (Div 2)' },
+  { day: 'Friday', day_of_week: 'Friday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'Discrete Maths Problem Solving', subject_name: 'Discrete Mathematics Problem Solving Lab', code: 'CS204-P', subject_code: 'CS204-P', faculty: 'Prof. Anil Kulkarni', faculty_name: 'Prof. Anil Kulkarni', room: 'Lab 201', room_no: 'Lab 201', type: 'Lab', timetable_type: 'Lab', section_name: 'Section B (Div 2)' },
+  { day: 'Friday', day_of_week: 'Friday', time: '03:15 PM - 04:00 PM', start_time: '15:15:00', end_time: '16:00:00', subject: 'Seminar / Co-curricular', subject_name: 'Technical Seminar & Co-curricular Activity', code: 'CS-SEM2', subject_code: 'CS-SEM2', faculty: 'Faculty Panel', faculty_name: 'Faculty Panel', room: 'Seminar Hall 2', room_no: 'Seminar Hall 2', type: 'Seminar', timetable_type: 'Seminar', section_name: 'Section B (Div 2)' },
+  // SATURDAY
+  { day: 'Saturday', day_of_week: 'Saturday', time: '09:00 AM - 10:00 AM', start_time: '09:00:00', end_time: '10:00:00', subject: 'Object Oriented Programming', subject_name: 'Object Oriented Programming — Extra Practice', code: 'CS202', subject_code: 'CS202', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'Lab 202', room_no: 'Lab 202', type: 'Practical', timetable_type: 'Practical', section_name: 'Section B (Div 2)' },
+  { day: 'Saturday', day_of_week: 'Saturday', time: '10:15 AM - 11:15 AM', start_time: '10:15:00', end_time: '11:15:00', subject: 'Industry Guest Lecture', subject_name: 'Industry Guest Lecture & Tech Talk', code: 'GEN-LECT', subject_code: 'GEN-LECT', faculty: 'Industry Expert', faculty_name: 'Industry Expert', room: 'Auditorium', room_no: 'Auditorium', type: 'Seminar', timetable_type: 'Seminar', section_name: 'Section B (Div 2)' },
+  { day: 'Saturday', day_of_week: 'Saturday', time: '11:15 AM - 12:15 PM', start_time: '11:15:00', end_time: '12:15:00', subject: 'Discrete Mathematics', subject_name: 'Discrete Mathematics — Problem Session', code: 'CS204', subject_code: 'CS204', faculty: 'Prof. Anil Kulkarni', faculty_name: 'Prof. Anil Kulkarni', room: 'AB-202', room_no: 'AB-202', type: 'Tutorial', timetable_type: 'Tutorial', section_name: 'Section B (Div 2)' },
+  { day: 'Saturday', day_of_week: 'Saturday', time: '01:15 PM - 03:15 PM', start_time: '13:15:00', end_time: '15:15:00', subject: 'Mini Project Sprint', subject_name: 'Mini Project Sprint & Review', code: 'CS-PROJ2', subject_code: 'CS-PROJ2', faculty: 'Prof. Rahul Deshmukh', faculty_name: 'Prof. Rahul Deshmukh', room: 'Project Lab 1', room_no: 'Project Lab 1', type: 'Workshop', timetable_type: 'Workshop', section_name: 'Section B (Div 2)' },
+  { day: 'Saturday', day_of_week: 'Saturday', time: '03:15 PM - 04:00 PM', start_time: '15:15:00', end_time: '16:00:00', subject: 'Student Council & Club Activities', subject_name: 'Student Council & Club Activities', code: 'CO-CURR', subject_code: 'CO-CURR', faculty: 'Student Council', faculty_name: 'Student Council', room: 'Sports Complex', room_no: 'Sports Complex', type: 'Activity', timetable_type: 'Activity', section_name: 'Section B (Div 2)' }
+];
+
+// Helper to generate 2nd year Sem-3 subjects for CSE students
+const makeSem3Subjects = (attPct: number, marksBase: number) => {
+  const f = attPct / 100;
+  const gradeFromPct = (p: number) => (p >= 90 ? 'O' : p >= 80 ? 'A+' : p >= 70 ? 'A' : p >= 60 ? 'B+' : 'B');
+  const gpFromPct   = (p: number) => (p >= 90 ? 10 : p >= 80 ? 9 : p >= 70 ? 8 : p >= 60 ? 7 : 6);
+  const m1 = Math.min(100, Math.round(marksBase + (Math.random() * 6 - 3)));
+  const m2 = Math.min(100, Math.round(marksBase - 2 + (Math.random() * 6 - 3)));
+  const m3 = Math.min(100, Math.round(marksBase - 4 + (Math.random() * 6 - 3)));
+  const m4 = Math.min(100, Math.round(marksBase + 1 + (Math.random() * 6 - 3)));
+  const m5 = Math.min(100, Math.round(marksBase + 3 + (Math.random() * 6 - 3)));
+  return [
+    { code: 'CS201', name: 'Engineering Mathematics III',           credits: 4, attended: Math.round(24 * f),                            total: 24, percentage: Number((f * 100).toFixed(1)),                            marks_obtained: m1, max_marks: 100, grade_letter: gradeFromPct(m1), grade_point: gpFromPct(m1) },
+    { code: 'CS202', name: 'Object Oriented Programming',            credits: 4, attended: Math.round(24 * Math.max(0.65, f - 0.02)),    total: 24, percentage: Number((Math.max(0.65, f - 0.02) * 100).toFixed(1)), marks_obtained: m2, max_marks: 100, grade_letter: gradeFromPct(m2), grade_point: gpFromPct(m2) },
+    { code: 'CS203', name: 'Digital Electronics',                    credits: 4, attended: Math.round(24 * Math.max(0.60, f - 0.05)),    total: 24, percentage: Number((Math.max(0.60, f - 0.05) * 100).toFixed(1)), marks_obtained: m3, max_marks: 100, grade_letter: gradeFromPct(m3), grade_point: gpFromPct(m3) },
+    { code: 'CS204', name: 'Discrete Mathematics',                   credits: 3, attended: Math.round(20 * f),                            total: 20, percentage: Number((f * 100).toFixed(1)),                            marks_obtained: m4, max_marks: 100, grade_letter: gradeFromPct(m4), grade_point: gpFromPct(m4) },
+    { code: 'CS205', name: 'Computer Organization & Architecture',   credits: 3, attended: Math.round(20 * Math.min(1, f + 0.02)),       total: 20, percentage: Number((Math.min(1, f + 0.02) * 100).toFixed(1)),       marks_obtained: m5, max_marks: 100, grade_letter: gradeFromPct(m5), grade_point: gpFromPct(m5) }
+  ];
+};
+
 // Helper to generate distinct subjects for CSE students
 const makeCseSubjects = (attPct: number, marksBase: number) => {
   const f = attPct / 100;
@@ -1066,6 +1127,50 @@ const INITIAL_STUDENTS: Record<string, StudentRecord> = {
     placementApplications: [
       { app_id: 'PL-NV-01', company_name: 'Nvidia Corporation', job_role: 'AI Solutions Engineer', package: '14.00 LPA', applied_date: '2026-10-15', status: 'Applied' }
     ]
+  },
+
+  // ===========================================================================
+  // SECOND YEAR STUDENT — Semester 3 (B.Tech CSE, Section B, Batch 2025-2029)
+  // Roll: 21001 | Login: 21001 / Aryan@21001
+  // ===========================================================================
+  '21001': {
+    id: 101,
+    roll_no: '21001',
+    prn: 'F25CE001',
+    name: 'Aryan Rajesh Mehta',
+    email: 'f25ce001@student.example.edu',
+    phone: '9876600101',
+    branch: 'Computer Science & Engineering',
+    course_name: 'B.Tech in Computer Science and Engineering',
+    department_name: 'Computer Science Department',
+    section_name: 'Section B (Div 2)',
+    current_semester: 3,
+    gender: 'Male',
+    sgpa: 7.85,
+    cgpa: 7.62,
+    attendance_pct: 85.5,
+    fees_due: 0.0,
+    placement_status: 'Not Applied',
+    timetable: MASTER_SEM3_TIMETABLE,
+    subjects: makeSem3Subjects(85.5, 79),
+    feeBills: [
+      { id: 'BILL-SEM3-21001', semester: 'Semester 3', category: 'Tuition & Development Fee', total_amount: 62000, paid_amount: 62000, due_amount: 0, due_date: '2026-09-30', status: 'Paid' },
+      { id: 'BILL-SEM2-21001', semester: 'Semester 2', category: 'Tuition & Development Fee', total_amount: 60000, paid_amount: 60000, due_amount: 0, due_date: '2026-01-31', status: 'Paid' }
+    ],
+    feePayments: [
+      { receipt_no: 'REC-2026-00501', date: '2026-08-10', amount: 62000, fee_type: 'Semester 3 Tuition Fee', mode: 'Online UPI (PhonePe)', status: 'Success' },
+      { receipt_no: 'REC-2026-00088', date: '2026-01-08', amount: 60000, fee_type: 'Semester 2 Tuition Fee', mode: 'NetBanking (HDFC)',   status: 'Success' }
+    ],
+    borrowedBooks: [
+      { issue_id: 'ISS-2026-201', title: 'Object Oriented Programming in Java', author: 'Herbert Schildt', isbn: '978-0071809252', accession_no: 'ACC-JAVA-007', issue_date: '2026-10-15', due_date: '2026-10-30', status: 'Overdue', fine_amount: 10 }
+    ],
+    returnedBooks: [
+      { return_id: 'RET-2026-055', title: 'Engineering Mathematics (Vol 2)', isbn: '978-8177229264', returned_date: '2026-09-20', condition: 'Good', fine_paid: 0 }
+    ],
+    examApplications: [
+      { app_id: 'EXAM-REG-SEM3-01', type: 'Regular Semester 3 Examination', semester: 'Semester 3', submission_date: '2026-10-12', fee_status: 'Paid', approval_status: 'Approved' }
+    ],
+    placementApplications: []
   }
 };
 
@@ -1092,7 +1197,7 @@ export const CENTRAL_LIBRARY_BOOKS: LibraryBook[] = [
 ];
 
 // In-Memory Reactive State Store with localStorage persistence and automatic schema upgrades
-const STORE_VERSION = 'v4_matched_schedule_and_salary_fix';
+const STORE_VERSION = 'v5_sem3_2ndyear_student_aryan';
 
 class ReactiveSupabaseStore {
   private students: Record<string, StudentRecord>;

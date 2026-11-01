@@ -3,7 +3,7 @@
  * Starts both Express Backend (Port 5000) and Vite Frontend (Port 3000) concurrently.
  */
 
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
@@ -35,10 +35,23 @@ const frontend = spawn(npmCmd, ['run', 'dev'], {
   env: { ...process.env }
 });
 
+function killProcess(proc) {
+  if (!proc || !proc.pid) return;
+  try {
+    if (isWindows) {
+      execSync(`taskkill /pid ${proc.pid} /T /F 2>nul`);
+    } else {
+      proc.kill('SIGTERM');
+    }
+  } catch (e) {
+    // Process might already be dead
+  }
+}
+
 function cleanup() {
   console.log('\n[STOPPING] Shutting down College ERP servers...');
-  if (backend && !backend.killed) backend.kill();
-  if (frontend && !frontend.killed) frontend.kill();
+  killProcess(backend);
+  killProcess(frontend);
   process.exit(0);
 }
 

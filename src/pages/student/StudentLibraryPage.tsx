@@ -12,7 +12,6 @@ import { Badge } from '../../components/common/Badge';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { EmptyState } from '../../components/common/EmptyState';
 import { api } from '../../services/api';
-import { mockBooks } from '../../data/mockLibrary';
 
 interface BorrowedBook {
   issue_id: string;
@@ -39,7 +38,7 @@ export const StudentLibraryPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'current' | 'history' | 'catalog'>('current');
   const [currentLoans, setCurrentLoans] = useState<BorrowedBook[]>([]);
   const [returnHistory, setReturnHistory] = useState<ReturnedBook[]>([]);
-  const [catalogBooks, setCatalogBooks] = useState<any[]>(mockBooks);
+  const [catalogBooks, setCatalogBooks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -48,14 +47,14 @@ export const StudentLibraryPage: React.FC = () => {
     
     Promise.all([
       api.getStudentLibrary().catch(() => null),
-      api.getLibraryBooks().catch(() => null)
+      api.getStudentLibraryCatalog().catch(() => null)
     ]).then(([libRes, catRes]) => {
       if (isMounted) {
         if (libRes?.success && libRes.data) {
           setCurrentLoans(libRes.data.currentLoans || []);
           setReturnHistory(libRes.data.returns || []);
         }
-        if (catRes?.success && catRes.data && catRes.data.length > 0) {
+        if (catRes?.success && Array.isArray(catRes.data)) {
           setCatalogBooks(catRes.data);
         }
       }

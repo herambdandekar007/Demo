@@ -5,6 +5,9 @@
 
 import { supabase, reactiveDb, StudentRecord } from './supabase';
 
+// Mock/offline fallbacks run ONLY when VITE_DEMO_MODE=true. Otherwise real errors surface in the UI.
+const DEMO_MODE = (import.meta as any).env?.VITE_DEMO_MODE === 'true';
+
 const PRIMARY_API_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
 const FALLBACK_API_URL = 'http://localhost:5000/api';
 
@@ -20,7 +23,7 @@ class ApiClient {
       try {
         const u = JSON.parse(raw);
         return reactiveDb.getStudent(u.codeOrRoll || u.email || '31001');
-      } catch {}
+      } catch { }
     }
     return reactiveDb.getStudent('31001');
   }
@@ -72,11 +75,12 @@ class ApiClient {
       }
       return res;
     } catch (err) {
-      // Supabase / Local Fallback with personalized credentials
+      if (!DEMO_MODE) throw err;
+      // Demo-mode only: local fallback with personalized credentials
       const cleanId = identifier.trim().toLowerCase();
       let userProfile: any = null;
 
-      if (role === 'STUDENT' || (!role && (cleanId.startsWith('3') || cleanId.includes('@student')))) {
+      if (role === 'STUDENT' || (!role && (cleanId.startsWith('2') || cleanId.startsWith('3') || cleanId.includes('@student')))) {
         const st = reactiveDb.getStudent(cleanId);
         userProfile = {
           id: st.id,
@@ -164,7 +168,7 @@ class ApiClient {
   async getCurrentUser() {
     try {
       return await this.request<{ success: boolean; user: any }>('/auth/me');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const saved = localStorage.getItem('college_erp_user');
       return { success: true, user: saved ? JSON.parse(saved) : null };
     }
@@ -178,7 +182,7 @@ class ApiClient {
   async getRegistrationOptions() {
     try {
       return await this.request<any>('/auth/registration-options');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         data: {
@@ -205,7 +209,7 @@ class ApiClient {
   async registerStudent(payload: any) {
     try {
       return await this.request<any>('/auth/register/student', { method: 'POST', body: JSON.stringify(payload) });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, message: 'Student registered successfully in Supabase database.', student: payload };
     }
   }
@@ -213,7 +217,7 @@ class ApiClient {
   async registerFaculty(payload: any) {
     try {
       return await this.request<any>('/auth/register/faculty', { method: 'POST', body: JSON.stringify(payload) });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, message: 'Faculty registered successfully in Supabase database.', faculty: payload };
     }
   }
@@ -225,7 +229,7 @@ class ApiClient {
   async getStudentProfile() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/profile');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -258,7 +262,7 @@ class ApiClient {
   async getStudentDashboard() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/dashboard');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       const totalAttended = st.subjects.reduce((acc, s) => acc + s.attended, 0);
       const totalClasses = st.subjects.reduce((acc, s) => acc + s.total, 0);
@@ -303,7 +307,7 @@ class ApiClient {
   async getStudentAttendance() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/attendance');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -343,7 +347,7 @@ class ApiClient {
   async getStudentFees() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/fees');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -369,7 +373,7 @@ class ApiClient {
   async getStudentLibrary() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/library');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -384,7 +388,7 @@ class ApiClient {
   async getStudentExams() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/exams');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -412,7 +416,7 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(applicationData)
       });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       const newApp = {
         app_id: `APP-${Date.now()}`,
@@ -431,7 +435,7 @@ class ApiClient {
   async getStudentResults() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/results');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -470,7 +474,7 @@ class ApiClient {
   async getStudentPlacement() {
     try {
       return await this.request<{ success: boolean; data: any }>('/students/placement');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const st = this.getActiveStudent();
       return {
         success: true,
@@ -522,7 +526,7 @@ class ApiClient {
   async getFacultyProfile() {
     try {
       return await this.request<{ success: boolean; data: any }>('/faculty/profile');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         data: {
@@ -542,7 +546,7 @@ class ApiClient {
   async getFacultyDashboard() {
     try {
       return await this.request<{ success: boolean; data: any }>('/faculty/dashboard');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       let facultyCode = 'FAC-001';
       try {
         const stored = localStorage.getItem('erp_user');
@@ -550,7 +554,7 @@ class ApiClient {
           const u = JSON.parse(stored);
           if (u.codeOrRoll) facultyCode = u.codeOrRoll;
         }
-      } catch {}
+      } catch { }
 
       const roster = reactiveDb.getEnrolledRoster();
       const slots = reactiveDb.getFacultyTimetableSlots(facultyCode);
@@ -584,7 +588,7 @@ class ApiClient {
     try {
       const url = queryString ? `/faculty/attendance?${queryString}` : '/faculty/attendance';
       return await this.request<{ success: boolean; data: any }>(url);
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       let facultyCode = 'FAC-001';
       try {
         const stored = localStorage.getItem('erp_user');
@@ -592,7 +596,7 @@ class ApiClient {
           const u = JSON.parse(stored);
           if (u.codeOrRoll) facultyCode = u.codeOrRoll;
         }
-      } catch {}
+      } catch { }
 
       const roster = reactiveDb.getEnrolledRoster();
       const timetable = reactiveDb.getFacultyTimetableSlots(facultyCode);
@@ -651,7 +655,7 @@ class ApiClient {
   async saveFacultyAttendance(payload: any) {
     // TRIGGER: Update reactive store for each student immediately!
     const subjectCode = payload.subjectCode || 'CS301';
-    if (payload.records && Array.isArray(payload.records)) {
+    if (DEMO_MODE && payload.records && Array.isArray(payload.records)) {
       for (const rec of payload.records) {
         reactiveDb.recordAttendance(subjectCode, rec.roll_no, rec.status);
       }
@@ -662,7 +666,7 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         sessionId: Date.now(),
@@ -671,10 +675,12 @@ class ApiClient {
     }
   }
 
-  async getFacultyGrading() {
+  async getFacultyGrading(scheduleId?: number) {
     try {
-      return await this.request<{ success: boolean; data: any }>('/faculty/grading');
-    } catch {
+      return await this.request<{ success: boolean; data: any; schedules?: any[]; activeScheduleId?: number }>(
+        `/faculty/grading${scheduleId ? `?schedule_id=${scheduleId}` : ''}`
+      );
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const roster = reactiveDb.getEnrolledRoster();
       const allStudents = reactiveDb.getAllStudents();
       return {
@@ -698,7 +704,7 @@ class ApiClient {
 
   async saveFacultyGrading(payload: any) {
     // TRIGGER: Update grades and recalculate SGPA/CGPA across all students immediately!
-    if (payload.marks && Array.isArray(payload.marks)) {
+    if (DEMO_MODE && payload.marks && Array.isArray(payload.marks)) {
       for (const m of payload.marks) {
         reactiveDb.updateGrade(m.roll_no, payload.subjectCode || 'CS302', m.marks_obtained, 100);
       }
@@ -709,7 +715,7 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         message: 'Marks recorded and student SGPA/CGPA recalculated via database trigger.'
@@ -720,7 +726,7 @@ class ApiClient {
   async getFacultyLeave() {
     try {
       return await this.request<{ success: boolean; data: any }>('/faculty/leave');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         data: {
@@ -739,15 +745,19 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, data: { ...payload, status: 'Approved', leave_id: Date.now() } };
     }
+  }
+
+  async cancelFacultyLeave(leaveCode: string) {
+    return await this.request<{ success: boolean; message: string }>(`/faculty/leave/${encodeURIComponent(leaveCode)}/cancel`, { method: 'PUT' });
   }
 
   async getFacultyPayroll() {
     try {
       return await this.request<{ success: boolean; data: any }>('/faculty/payroll');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       let facultyCode = 'FAC-001';
       let facultyName = 'Prof. Ashwini Nair';
       try {
@@ -757,7 +767,7 @@ class ApiClient {
           if (u.codeOrRoll) facultyCode = u.codeOrRoll;
           if (u.name) facultyName = u.name;
         }
-      } catch {}
+      } catch { }
 
       return {
         success: true,
@@ -845,7 +855,7 @@ class ApiClient {
   async getFacultyTimetable() {
     try {
       return await this.request<{ success: boolean; data: any[] }>('/faculty/timetable');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       let facultyCode = 'FAC-001';
       try {
         const stored = localStorage.getItem('erp_user');
@@ -853,7 +863,7 @@ class ApiClient {
           const u = JSON.parse(stored);
           if (u.codeOrRoll) facultyCode = u.codeOrRoll;
         }
-      } catch {}
+      } catch { }
 
       return {
         success: true,
@@ -865,7 +875,7 @@ class ApiClient {
   async createFacultyTimetable(payload: any) {
     try {
       return await this.request<any>('/faculty/timetable', { method: 'POST', body: JSON.stringify(payload) });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, message: 'Timetable entry created.', timetable_id: Date.now() };
     }
   }
@@ -873,7 +883,7 @@ class ApiClient {
   async updateFacultyTimetable(id: number, payload: any) {
     try {
       return await this.request<any>(`/faculty/timetable/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, message: 'Timetable entry updated.' };
     }
   }
@@ -881,15 +891,32 @@ class ApiClient {
   async deleteFacultyTimetable(id: number) {
     try {
       return await this.request<any>(`/faculty/timetable/${id}`, { method: 'DELETE' });
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, message: 'Timetable entry deleted.' };
+    }
+  }
+
+  async getFacultyColleagues() {
+    try {
+      return await this.request<{ success: boolean; data: { faculty_id: number; faculty_name: string; designation_name?: string }[] }>('/faculty/colleagues');
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      return { success: true, data: [] as { faculty_id: number; faculty_name: string; designation_name?: string }[] };
+    }
+  }
+
+  async getStudentLibraryCatalog(search?: string) {
+    try {
+      const q = search ? `?search=${encodeURIComponent(search)}` : '';
+      return await this.request<any>(`/students/library/catalog${q}`);
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      return { success: true, data: reactiveDb.getLibraryCatalog() };
     }
   }
 
   async getFacultyStudentPreview(studentId: number) {
     try {
       return await this.request<any>(`/faculty/preview-student/${studentId}`);
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const st = all.find(s => s.id === studentId) || all[0];
       return {
@@ -934,7 +961,7 @@ class ApiClient {
   async getStaffProfile() {
     try {
       return await this.request<any>('/staff/profile');
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const user = JSON.parse(localStorage.getItem('college_erp_user') || '{}');
       return { success: true, data: user };
     }
@@ -943,7 +970,7 @@ class ApiClient {
   // TNP Cell
   async getTNPDashboard() {
     try { return await this.request<any>('/staff/tnp/dashboard'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const placedCount = all.filter(s => s.placement_status === 'Placed').length;
       return {
@@ -962,7 +989,7 @@ class ApiClient {
 
   async getTNPCompanies() {
     try { return await this.request<any>('/staff/tnp/companies'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         data: [
@@ -977,17 +1004,17 @@ class ApiClient {
 
   async addCompany(payload: any) {
     try { return await this.request<any>('/staff/tnp/companies', { method: 'POST', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Company created in database.', data: { ...payload, company_id: Date.now() } }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Company created in database.', data: { ...payload, company_id: Date.now() } }; }
   }
 
   async updateCompany(id: number, payload: any) {
     try { return await this.request<any>(`/staff/tnp/companies/${id}`, { method: 'PUT', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Company updated.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Company updated.' }; }
   }
 
   async getTNPDrives() {
     try { return await this.request<any>('/staff/tnp/drives'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         data: [
@@ -1000,12 +1027,12 @@ class ApiClient {
 
   async addDrive(payload: any) {
     try { return await this.request<any>('/staff/tnp/drives', { method: 'POST', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Placement drive created.', drive_id: Date.now() }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Placement drive created.', drive_id: Date.now() }; }
   }
 
   async updateDriveStatus(id: number, status: string) {
     try { return await this.request<any>(`/staff/tnp/drives/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); }
-    catch { return { success: true, message: 'Drive status updated.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Drive status updated.' }; }
   }
 
   async getTNPApplications(driveId?: number, status?: string) {
@@ -1014,7 +1041,7 @@ class ApiClient {
       if (driveId) q.append('drive_id', String(driveId));
       if (status) q.append('status', status);
       return await this.request<any>(`/staff/tnp/applications?${q.toString()}`);
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const apps = all.flatMap(s => s.placementApplications.map(a => ({
         app_id: a.app_id,
@@ -1033,17 +1060,17 @@ class ApiClient {
 
   async shortlistApplication(id: number, payload: any) {
     // TRIGGER: Update student placement status immediately!
-    if (payload.roll_no) {
+    if (DEMO_MODE && payload.roll_no) {
       reactiveDb.updatePlacementStatus(payload.roll_no, payload.company_name || 'Amazon', payload.status || 'Selected');
     }
 
     try { return await this.request<any>(`/staff/tnp/applications/${id}/shortlist`, { method: 'PUT', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Student application updated.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Student application updated.' }; }
   }
 
   async getTNPPlacements() {
     try { return await this.request<any>('/staff/tnp/placements'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const placed = all.filter(s => s.placement_status === 'Placed').map(s => ({
         placement_id: s.id,
@@ -1061,43 +1088,81 @@ class ApiClient {
   // Finance Officer
   async getFinanceDashboard() {
     try { return await this.request<any>('/staff/finance/dashboard'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
+      const totalDue = all.reduce((acc, s) => acc + s.feeBills.reduce((a, b) => a + b.due_amount, 0), 0);
       const totalCollected = all.reduce((acc, s) => acc + s.feeBills.reduce((a, b) => a + b.paid_amount, 0), 0);
-      const totalPending = all.reduce((acc, s) => acc + s.feeBills.reduce((a, b) => a + b.due_amount, 0), 0);
+      const pendingFees = all.reduce((acc, s) => acc + s.feeBills.filter(b => b.due_amount > 0).length, 0);
       return {
         success: true,
         data: {
-          totalCollected,
-          totalPending,
-          totalStudents: all.length,
-          collectionPercentage: 86.4
+          stats: {
+            totalDue,
+            totalCollected,
+            pendingFees,
+            overdueCount: 0,
+            totalFacultyPayroll: 5010000,
+            disbursedFacultyPayroll: 5010000,
+            pendingFacultyPayroll: 0,
+            facultyCount: 60,
+            totalLibraryFines: 19695,
+            collectedLibraryFines: 115,
+            pendingLibraryFines: 19580,
+            totalFineTransactions: 286
+          },
+          recentPayments: all.flatMap(s => s.feePayments.map(p => ({
+            ...p,
+            student_name: s.name,
+            roll_no: s.roll_no,
+            fee_type: p.fee_type || 'Tuition Fee'
+          }))).slice(0, 10),
+          deptBreakdown: [
+            { department_name: 'Computer Science', due: totalDue * 0.4, paid: totalCollected * 0.4, balance: totalDue * 0.4 - totalCollected * 0.4, fee_records: 25 },
+            { department_name: 'Electronics and Telecommunication', due: totalDue * 0.2, paid: totalCollected * 0.2, balance: totalDue * 0.2 - totalCollected * 0.2, fee_records: 15 },
+            { department_name: 'Information Technology', due: totalDue * 0.2, paid: totalCollected * 0.2, balance: totalDue * 0.2 - totalCollected * 0.2, fee_records: 12 },
+            { department_name: 'Artificial Intelligence and Data Science', due: totalDue * 0.2, paid: totalCollected * 0.2, balance: totalDue * 0.2 - totalCollected * 0.2, fee_records: 10 }
+          ]
         }
       };
     }
   }
 
-  async getStudentsWithFees(params?: any) {
-    try { return await this.request<any>('/staff/finance/students'); }
-    catch {
-      const all = reactiveDb.getAllStudents();
+  async getStudentsWithFees(params?: { search?: string; status?: string; dept?: string }) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.status) q.append('status', params.status);
+      if (params?.dept) q.append('dept', params.dept);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return await this.request<any>(`/staff/finance/students${qs}`);
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      let all = reactiveDb.getAllStudents();
+      if (params?.search) {
+        const s = params.search.toLowerCase();
+        all = all.filter(st => st.name.toLowerCase().includes(s) || String(st.roll_no).includes(s));
+      }
       return {
         success: true,
         data: all.map(s => {
           const totalFee = s.feeBills.reduce((a, b) => a + b.total_amount, 0);
           const paidFee = s.feeBills.reduce((a, b) => a + b.paid_amount, 0);
           const dueFee = s.feeBills.reduce((a, b) => a + b.due_amount, 0);
+          const status = dueFee <= 0 ? 'Paid' : (paidFee > 0 ? 'Partially Paid' : 'Unpaid');
           return {
             student_id: s.id,
             roll_no: s.roll_no,
             student_name: s.name,
             department_name: s.department_name,
+            branch: s.department_name,
             course_name: s.course_name,
-            total_fee: totalFee,
-            paid_fee: paidFee,
-            due_fee: dueFee,
-            status: dueFee <= 0 ? 'Paid' : (paidFee > 0 ? 'Partially Paid' : 'Unpaid')
+            total_due: totalFee,
+            total_paid: paidFee,
+            balance: dueFee,
+            overall_status: status
           };
+        }).filter(st => {
+          if (!params?.status) return true;
+          return st.overall_status === params.status;
         })
       };
     }
@@ -1105,37 +1170,50 @@ class ApiClient {
 
   async getStudentFeeDetails(studentId: number) {
     try { return await this.request<any>(`/staff/finance/fees/${studentId}`); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const st = all.find(s => s.id === studentId) || all[0];
       return {
         success: true,
         data: {
           student: st,
-          bills: st.feeBills,
-          payments: st.feePayments
+          fees: (st.feeBills || []).map((b: any) => ({
+            student_fee_id: b.id,
+            fee_type: b.category,
+            amount_due: b.total_amount,
+            amount_paid: b.paid_amount,
+            balance_amount: b.due_amount,
+            due_date: b.due_date,
+            status: b.due_amount <= 0 ? 'Paid' : (b.paid_amount > 0 ? 'Partially Paid' : 'Unpaid')
+          })),
+          payments: st.feePayments || []
         }
       };
     }
   }
 
   async recordPayment(studentFeeId: number, payload: any) {
-    // TRIGGER: Update fee balance immediately!
-    const roll = payload.roll_no || '31002';
-    reactiveDb.recordFeePayment(roll, String(studentFeeId), Number(payload.amount), payload.payment_mode || 'Online');
-
-    try { return await this.request<any>(`/staff/finance/fees/${studentFeeId}/payment`, { method: 'PUT', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Fee payment logged and balance updated via trigger.' }; }
+    if (DEMO_MODE && payload.roll_no) {
+      reactiveDb.recordFeePayment(String(payload.roll_no), String(studentFeeId), Number(payload.amount), payload.payment_mode || 'Cash');
+    }
+    try {
+      return await this.request<any>(`/staff/finance/fees/${studentFeeId}/payment`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      return { success: true, message: 'Fee payment recorded successfully.' };
+    }
   }
 
   async getFeeStructures() {
     try { return await this.request<any>('/staff/finance/fee-structures'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       return {
         success: true,
         data: [
-          { id: 1, course_name: 'B.Tech in Computer Science and Engineering', semester: 'Semester 5', amount: 68000, category: 'Tuition & Development Fee' },
-          { id: 2, course_name: 'B.Tech in Electronics & Telecommunication', semester: 'Semester 5', amount: 65000, category: 'Tuition & Development Fee' }
+          { fee_structure_id: 1, id: 1, course_name: 'B.Tech in Computer Science and Engineering', semester_number: 5, amount: 68000, fee_type: 'Tuition & Development Fee', academic_year: '2026-2027' },
+          { fee_structure_id: 2, id: 2, course_name: 'B.Tech in Electronics & Telecommunication', semester_number: 5, amount: 65000, fee_type: 'Tuition & Development Fee', academic_year: '2026-2027' }
         ]
       };
     }
@@ -1143,26 +1221,114 @@ class ApiClient {
 
   async addFeeStructure(payload: any) {
     try { return await this.request<any>('/staff/finance/fee-structures', { method: 'POST', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Fee structure created.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Fee structure created.' }; }
   }
 
-  async getAllPayments() {
-    try { return await this.request<any>('/staff/finance/payments'); }
-    catch {
+  async getAllPayments(params?: { receiptNumber?: string; studentName?: string; paymentMethod?: string; feeType?: string; startDate?: string; endDate?: string }) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.receiptNumber) q.append('receiptNumber', params.receiptNumber);
+      if (params?.studentName) q.append('studentName', params.studentName);
+      if (params?.paymentMethod) q.append('paymentMethod', params.paymentMethod);
+      if (params?.feeType) q.append('feeType', params.feeType);
+      if (params?.startDate) q.append('startDate', params.startDate);
+      if (params?.endDate) q.append('endDate', params.endDate);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return await this.request<any>(`/staff/finance/payments${qs}`);
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
-      const payments = all.flatMap(s => s.feePayments.map(p => ({
+      let payments = all.flatMap(s => s.feePayments.map((p: any) => ({
         ...p,
+        payment_id: p.id || p.receipt_no,
+        transaction_reference: p.receipt_no,
         student_name: s.name,
-        roll_no: s.roll_no
+        roll_no: s.roll_no,
+        fee_type: p.fee_type || 'Tuition Fee',
+        payment_date: p.date,
+        payment_mode: p.mode,
+        status: p.status || 'Success'
       })));
+      if (params?.receiptNumber) {
+        payments = payments.filter(p => (p.transaction_reference || '').toLowerCase().includes(params.receiptNumber!.toLowerCase()));
+      }
+      if (params?.studentName) {
+        payments = payments.filter(p => (p.student_name || '').toLowerCase().includes(params.studentName!.toLowerCase()) || String(p.roll_no).includes(params.studentName!));
+      }
+      if (params?.paymentMethod) {
+        payments = payments.filter(p => p.payment_mode === params.paymentMethod);
+      }
       return { success: true, data: payments };
+    }
+  }
+
+  async getFinanceFacultyPayroll(params?: { facultyName?: string; facultyId?: string; department?: string; salaryMonth?: string; status?: string }) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.facultyName) q.append('facultyName', params.facultyName);
+      if (params?.facultyId) q.append('facultyId', params.facultyId);
+      if (params?.department) q.append('department', params.department);
+      if (params?.salaryMonth) q.append('salaryMonth', params.salaryMonth);
+      if (params?.status) q.append('status', params.status);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return await this.request<any>(`/staff/finance/payroll${qs}`);
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      return {
+        success: true,
+        data: [],
+        summary: { totalPayroll: 0, totalDisbursed: 0, pendingSalary: 0, facultyCount: 0, totalPayslips: 0 }
+      };
+    }
+  }
+
+  async getFinanceLibraryFinancials(params?: { studentName?: string; status?: string; startDate?: string; endDate?: string }) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.studentName) q.append('studentName', params.studentName);
+      if (params?.status) q.append('status', params.status);
+      if (params?.startDate) q.append('startDate', params.startDate);
+      if (params?.endDate) q.append('endDate', params.endDate);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return await this.request<any>(`/staff/finance/library-fines${qs}`);
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      return {
+        success: true,
+        data: [],
+        summary: { totalGenerated: 0, totalCollected: 0, totalOutstanding: 0, totalTransactions: 0 }
+      };
+    }
+  }
+
+  async getFinancialReports(params?: { startDate?: string; endDate?: string; department?: string; category?: string }) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.startDate) q.append('startDate', params.startDate);
+      if (params?.endDate) q.append('endDate', params.endDate);
+      if (params?.department) q.append('department', params.department);
+      if (params?.category) q.append('category', params.category);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return await this.request<any>(`/staff/finance/reports${qs}`);
+    } catch (__e) { if (!DEMO_MODE) throw __e;
+      return {
+        success: true,
+        data: {
+          summary: {
+            income: { feeCollected: 0, feeOutstanding: 0, feeTotalInvoiced: 0, fineCollected: 0, fineOutstanding: 0, totalIncomeCollected: 0, totalReceivables: 0 },
+            expenses: { salaryDisbursed: 0, salaryPending: 0, totalBudgeted: 0 },
+            netInstitutionalSurplus: 0
+          },
+          departmentCollections: [],
+          paymentModes: [],
+          monthlyFee: [],
+          monthlyPayroll: []
+        }
+      };
     }
   }
 
   // Librarian
   async getLibraryDashboard() {
     try { return await this.request<any>('/staff/library/dashboard'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       const books = reactiveDb.getLibraryCatalog();
       const all = reactiveDb.getAllStudents();
       const totalIssued = all.reduce((acc, s) => acc + s.borrowedBooks.length, 0);
@@ -1185,7 +1351,7 @@ class ApiClient {
       if (search) q.append('search', search);
       if (category) q.append('category', category);
       return await this.request<any>(`/staff/library/books?${q.toString()}`);
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       let books = reactiveDb.getLibraryCatalog();
       if (search) {
         const s = search.toLowerCase();
@@ -1197,12 +1363,12 @@ class ApiClient {
 
   async addBook(payload: any) {
     try { return await this.request<any>('/staff/library/books', { method: 'POST', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Book created in library catalog.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Book created in library catalog.' }; }
   }
 
   async updateBook(isbn: string, payload: any) {
     try { return await this.request<any>(`/staff/library/books/${isbn}`, { method: 'PUT', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Book updated.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Book updated.' }; }
   }
 
   async getLibraryIssues(status?: string, studentId?: number) {
@@ -1211,7 +1377,7 @@ class ApiClient {
       if (status) q.append('status', status);
       if (studentId) q.append('student_id', String(studentId));
       return await this.request<any>(`/staff/library/issues?${q.toString()}`);
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const issues = all.flatMap(s => s.borrowedBooks.map(b => ({
         issue_id: b.issue_id,
@@ -1232,25 +1398,23 @@ class ApiClient {
 
   async issueBook(payload: any) {
     // TRIGGER: Decrement available copies immediately!
-    const roll = payload.roll_no || '31001';
-    reactiveDb.issueBook(roll, Number(payload.book_id || 1));
+    if (DEMO_MODE) reactiveDb.issueBook(payload.roll_no || '31001', Number(payload.book_id || 1));
 
     try { return await this.request<any>('/staff/library/issues', { method: 'POST', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Book issued and library inventory decremented via trigger.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Book issued and library inventory decremented via trigger.' }; }
   }
 
   async returnBook(issueId: number, payload?: any) {
     // TRIGGER: Increment available copies immediately!
-    const roll = payload?.roll_no || '31001';
-    reactiveDb.returnBook(roll, String(issueId));
+    if (DEMO_MODE) reactiveDb.returnBook(payload?.roll_no || '31001', String(issueId));
 
     try { return await this.request<any>(`/staff/library/issues/${issueId}/return`, { method: 'PUT', body: JSON.stringify(payload) }); }
-    catch { return { success: true, message: 'Book returned and library inventory updated via trigger.' }; }
+    catch (__e) { if (!DEMO_MODE) throw __e; return { success: true, message: 'Book returned and library inventory updated via trigger.' }; }
   }
 
   async getOverdueBooks() {
     try { return await this.request<any>('/staff/library/overdue'); }
-    catch {
+    catch (__e) { if (!DEMO_MODE) throw __e;
       const all = reactiveDb.getAllStudents();
       const overdue = all.flatMap(s => s.borrowedBooks.filter(b => b.status === 'Overdue').map(b => ({
         issue_id: b.issue_id,
@@ -1276,7 +1440,7 @@ class ApiClient {
       if (status) q.append('status', status);
       if (search) q.append('search', search);
       return await this.request<any>(`/staff/library/fines?${q.toString()}`);
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, data: [] };
     }
   }
@@ -1291,7 +1455,7 @@ class ApiClient {
           body: JSON.stringify(fineIdOrPayload)
         });
       }
-    } catch {
+    } catch (__e) { if (!DEMO_MODE) throw __e;
       return { success: true, message: 'Fine collected and settled successfully in Supabase.' };
     }
   }

@@ -13,7 +13,6 @@ import {
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { DataTable, Column } from '../../components/common/DataTable';
-import { mockFaculty } from '../../data/mockFaculty';
 import { api } from '../../services/api';
 
 interface LeaveApplicationRecord {
@@ -35,7 +34,7 @@ export const FacultyLeavePage: React.FC = () => {
   const loadLeaves = async () => {
     try {
       const res = await api.getFacultyLeave();
-      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res?.data && Array.isArray(res.data)) {
         setLeaveRecords(res.data);
       }
     } catch (err) {
@@ -47,6 +46,10 @@ export const FacultyLeavePage: React.FC = () => {
     loadLeaves();
   }, []);
 
+  const [colleagues, setColleagues] = useState<{ faculty_id: number; faculty_name: string; designation_name?: string }[]>([]);
+  useEffect(() => {
+    api.getFacultyColleagues().then(r => { if (r?.success) setColleagues(r.data || []); }).catch(() => setColleagues([]));
+  }, []);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedRecordToCancel, setSelectedRecordToCancel] = useState<LeaveApplicationRecord | null>(null);
 
@@ -56,7 +59,7 @@ export const FacultyLeavePage: React.FC = () => {
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     reason: '',
-    cover_faculty: 'Prof. Sunita Rao',
+    cover_faculty: '',
     notes: ''
   });
 
@@ -68,39 +71,24 @@ export const FacultyLeavePage: React.FC = () => {
     return diff > 0 ? diff : 1;
   };
 
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+
   const handleApplyLeave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const days = calculateDays(formData.start_date, formData.end_date);
-    const tempId = `LV-2026-${Math.floor(100 + Math.random() * 900)}`;
-
-    const newRecord: LeaveApplicationRecord = {
-      id: tempId,
-      leave_type: formData.leave_type,
-      start_date: formData.start_date,
-      end_date: formData.end_date,
-      days_count: days,
-      reason: formData.reason,
-      cover_faculty: formData.cover_faculty,
-      status: "Request Sent",
-      applied_on: new Date().toISOString().split('T')[0],
-      approver_comments: "Request sent. Persisted in database."
-    };
-
+    setLeaveError(null);
     try {
-      const res = await api.applyFacultyLeave({
+      await api.applyFacultyLeave({
         leave_type: formData.leave_type,
         start_date: formData.start_date,
         end_date: formData.end_date,
-        days_count: days,
         reason: formData.reason,
         cover_faculty: formData.cover_faculty
       });
-      if (res?.data?.id) {
-        newRecord.id = res.data.id;
-      }
       await loadLeaves();
-    } catch {
-      setLeaveRecords(prev => [newRecord, ...prev]);
+    } catch (err: any) {
+      // Do not pretend it was saved: keep the form open and show the server's reason
+      setLeaveError(err?.message || 'Could not submit leave application.');
+      return;
     }
 
     setIsApplyModalOpen(false);
@@ -109,22 +97,18 @@ export const FacultyLeavePage: React.FC = () => {
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
       reason: '',
-      cover_faculty: 'Prof. Sunita Rao',
+      cover_faculty: '',
       notes: ''
     });
   };
 
-  const handleCancelLeave = (record: LeaveApplicationRecord) => {
-    setLeaveRecords(prev => prev.map(r => {
-      if (r.id === record.id) {
-        return {
-          ...r,
-          status: 'Cancelled',
-          approver_comments: 'Revoked by faculty applicant.'
-        };
-      }
-      return r;
-    }));
+  const handleCancelLeave = async (record: LeaveApplicationRecord) => {
+    try {
+      await api.cancelFacultyLeave(String(record.id));
+      await loadLeaves();
+    } catch (err: any) {
+      setLeaveError(err?.message || 'Could not cancel this leave.');
+    }
     setSelectedRecordToCancel(null);
   };
 
@@ -279,6 +263,7 @@ export const FacultyLeavePage: React.FC = () => {
           maxWidth="lg"
         >
           <form onSubmit={handleApplyLeave} className="space-y-4 text-xs">
+            {leaveError && <div className="p-2 rounded border border-red-300 bg-red-50 text-red-700 font-semibold">{leaveError}</div>}
             <div>
               <label className="block font-bold text-slate-700 mb-1">Leave Category *</label>
               <select
@@ -322,9 +307,10 @@ export const FacultyLeavePage: React.FC = () => {
                 onChange={e => setFormData({ ...formData, cover_faculty: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none text-navy-950 font-semibold"
               >
-                {mockFaculty.filter(f => f.faculty_id !== 1).map(f => (
-                  <option key={f.faculty_id} value={`${f.first_name} ${f.last_name}`}>
-                    {f.first_name} {f.last_name} ({f.designation_name})
+                <option value="">No cover arranged</option>
+                {colleagues.map(f => (
+                  <option key={f.faculty_id} value={f.faculty_name}>
+                    {f.faculty_name}{f.designation_name ? ` (${f.designation_name})` : ''}
                   </option>
                 ))}
               </select>

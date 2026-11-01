@@ -106,7 +106,7 @@ if (require.main === module) {
     // Check DB on startup
     const dbStatus = await checkDbConnection();
     if (dbStatus.connected) {
-      console.log(`[DB STATUS] Connected to MySQL database '${process.env.DB_NAME || 'college_erp'}'.`);
+      console.log('[DB STATUS] Connected to database successfully.');
     } else {
       console.log(`[DB STATUS] Notice: ${dbStatus.message}`);
     }

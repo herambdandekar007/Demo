@@ -31,8 +31,13 @@ router.get('/grading', facultyController.getGradingRoster);
 router.post('/grading', facultyController.saveGrading);
 
 // Leave Applications & History
+router.get('/colleagues', facultyController.getColleagues);
 router.get('/leave', facultyController.getLeave);
 router.post('/leave', facultyController.applyLeave);
+router.put('/leave/:code/cancel', facultyController.cancelLeave);
+// Approver (ADMIN) endpoints
+router.get('/leave/pending', requireRole('ADMIN'), facultyController.listPendingLeaves);
+router.put('/leave/:code/decision', requireRole('ADMIN'), facultyController.decideLeave);
 
 // Faculty Payroll & Monthly Payslips
 router.get('/payroll', facultyController.getPayroll);

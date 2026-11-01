@@ -42,7 +42,9 @@ function getStaffConfig(role: string) {
         navItems: [
           { to: '/staff/dashboard', label: 'Finance Dashboard', icon: LayoutDashboard },
           { to: '/staff/fees', label: 'Student Fees', icon: DollarSign },
-          { to: '/staff/payments', label: 'Payment Records', icon: CreditCard },
+          { to: '/staff/payments', label: 'Payment Receipts', icon: CreditCard },
+          { to: '/staff/payroll', label: 'Faculty Payroll', icon: Users },
+          { to: '/staff/library-fines', label: 'Library Collections', icon: BookOpen },
           { to: '/staff/fee-structures', label: 'Fee Structures', icon: FileText },
           { to: '/staff/reports', label: 'Financial Reports', icon: BarChart3 },
         ]

@@ -47,6 +47,9 @@ router.put('/finance/fees/:studentFeeId/payment',     sc.requireRole('FINANCE', 
 router.get('/finance/fee-structures',                 sc.requireRole('FINANCE', 'ADMIN'), sc.getFeeStructures);
 router.post('/finance/fee-structures',                sc.requireRole('FINANCE', 'ADMIN'), sc.addFeeStructure);
 router.get('/finance/payments',                       sc.requireRole('FINANCE', 'ADMIN'), sc.getAllPayments);
+router.get('/finance/payroll',                        sc.requireRole('FINANCE', 'ADMIN'), sc.getFacultyPayroll);
+router.get('/finance/library-fines',                  sc.requireRole('FINANCE', 'ADMIN'), sc.getLibraryFinancials);
+router.get('/finance/reports',                        sc.requireRole('FINANCE', 'ADMIN'), sc.getFinancialReports);
 
 // ─────────────────────────────────────────────
 // Librarian Routes
