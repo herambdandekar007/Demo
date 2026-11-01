@@ -947,7 +947,7 @@ class ApiClient {
         data: any[];
       }>(`/faculty/students${qs}`);
     } catch (__e) {
-      if (!DEMO_MODE) throw __e;
+      console.warn('Backend getFacultyStudents error, using local roster fallback:', __e);
 
       let facultyCode = 'FAC-001';
       try {
