@@ -10,9 +10,12 @@ for (const p of envPaths) {
   dotenv.config({ path: p });
 }
 
+const defaultSupabaseUrl = 'postgresql://postgres.zkfpncueeexdpqtyrjbz:M8DBMPROJECTTT@aws-0-ap-south-1.pooler.supabase.com:6543/postgres';
+const rawDbUrl = process.env.DATABASE_URL || defaultSupabaseUrl;
+
 const isPostgres = Boolean(
-  process.env.DATABASE_URL &&
-  (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'))
+  rawDbUrl &&
+  (rawDbUrl.startsWith('postgres://') || rawDbUrl.startsWith('postgresql://'))
 );
 
 let pool;
@@ -33,7 +36,7 @@ if (isPostgres) {
   // Supabase pooler port 5432 is Session mode (capped at 15 clients across all team members).
   // If pooler port 5432 is specified, route to port 6543 (Supabase Transaction mode pooler / Supavisor),
   // which supports 10,000+ concurrent clients and prevents EMAXCONNSESSION errors.
-  let connectionString = process.env.DATABASE_URL;
+  let connectionString = rawDbUrl;
   if (connectionString && connectionString.includes('.pooler.supabase.com:5432')) {
     connectionString = connectionString.replace(':5432', ':6543');
   }
