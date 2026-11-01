@@ -534,7 +534,9 @@ async function getResults(req, res, next) {
     }
 
     const [results] = await query(
-      `SELECT r.*, e.exam_name, e.semester_id, s.semester_number, s.academic_year, ${SEM_LABEL('s')} AS semester_name
+      `SELECT r.*, e.exam_name, e.semester_id, s.semester_number, 
+              COALESCE(e.academic_year, s.academic_year) AS academic_year, 
+              ('Semester ' || s.semester_number || ' (' || COALESCE(e.academic_year, s.academic_year) || ')') AS semester_name
        FROM result r
        JOIN exam e ON r.exam_id = e.exam_id
        JOIN academic_semester s ON e.semester_id = s.semester_id

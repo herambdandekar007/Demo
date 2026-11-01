@@ -1147,7 +1147,7 @@ const INITIAL_STUDENTS: Record<string, StudentRecord> = {
     current_semester: 3,
     gender: 'Male',
     sgpa: 7.85,
-    cgpa: 7.62,
+    cgpa: 7.70,
     attendance_pct: 85.5,
     fees_due: 0.0,
     placement_status: 'Not Applied',

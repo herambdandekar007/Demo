@@ -181,16 +181,149 @@ const DEFAULT_SCHEDULES: ExamScheduleItem[] = [
     academic_year: '2025-26',
     credits: 4,
     exam_date: '2025-11-16'
+  },
+  // Semester 1 schedules (2nd Year student completed semester)
+  {
+    schedule_id: 301,
+    exam_id: 11,
+    exam_name: 'End-Semester Examination (Sem 1)',
+    subject_id: 46,
+    subject_code: 'CS101',
+    subject_name: 'Engineering Mathematics I',
+    semester_number: 1,
+    semester_label: 'Semester 1 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-01-12'
+  },
+  {
+    schedule_id: 302,
+    exam_id: 11,
+    exam_name: 'End-Semester Examination (Sem 1)',
+    subject_id: 47,
+    subject_code: 'CS102',
+    subject_name: 'Applied Physics',
+    semester_number: 1,
+    semester_label: 'Semester 1 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-01-15'
+  },
+  {
+    schedule_id: 303,
+    exam_id: 11,
+    exam_name: 'End-Semester Examination (Sem 1)',
+    subject_id: 48,
+    subject_code: 'CS103',
+    subject_name: 'Basic Electrical & Electronics Engineering',
+    semester_number: 1,
+    semester_label: 'Semester 1 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-01-18'
+  },
+  {
+    schedule_id: 304,
+    exam_id: 11,
+    exam_name: 'End-Semester Examination (Sem 1)',
+    subject_id: 49,
+    subject_code: 'CS104',
+    subject_name: 'Problem Solving & C Programming',
+    semester_number: 1,
+    semester_label: 'Semester 1 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-01-21'
+  },
+  {
+    schedule_id: 305,
+    exam_id: 11,
+    exam_name: 'End-Semester Examination (Sem 1)',
+    subject_id: 50,
+    subject_code: 'CS105',
+    subject_name: 'Engineering Graphics & CAD',
+    semester_number: 1,
+    semester_label: 'Semester 1 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-01-24'
+  },
+  // Semester 2 schedules (2nd Year student completed semester)
+  {
+    schedule_id: 401,
+    exam_id: 12,
+    exam_name: 'End-Semester Examination (Sem 2)',
+    subject_id: 51,
+    subject_code: 'CS106',
+    subject_name: 'Engineering Mathematics II',
+    semester_number: 2,
+    semester_label: 'Semester 2 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-06-18'
+  },
+  {
+    schedule_id: 402,
+    exam_id: 12,
+    exam_name: 'End-Semester Examination (Sem 2)',
+    subject_id: 52,
+    subject_code: 'CS107',
+    subject_name: 'Data Structures & Algorithms Fundamentals',
+    semester_number: 2,
+    semester_label: 'Semester 2 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-06-21'
+  },
+  {
+    schedule_id: 403,
+    exam_id: 12,
+    exam_name: 'End-Semester Examination (Sem 2)',
+    subject_id: 53,
+    subject_code: 'CS108',
+    subject_name: 'Object-Oriented Programming using C++',
+    semester_number: 2,
+    semester_label: 'Semester 2 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-06-24'
+  },
+  {
+    schedule_id: 404,
+    exam_id: 12,
+    exam_name: 'End-Semester Examination (Sem 2)',
+    subject_id: 54,
+    subject_code: 'CS109',
+    subject_name: 'Digital Logic & Processor Basics',
+    semester_number: 2,
+    semester_label: 'Semester 2 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-06-27'
+  },
+  {
+    schedule_id: 405,
+    exam_id: 12,
+    exam_name: 'End-Semester Examination (Sem 2)',
+    subject_id: 55,
+    subject_code: 'CS110',
+    subject_name: 'Environmental Science & Green Computing',
+    semester_number: 2,
+    semester_label: 'Semester 2 (2024-2025)',
+    academic_year: '2024-2025',
+    credits: 4,
+    exam_date: '2025-06-30'
   }
 ];
 
-// Student Master Roster (covers standard demo accounts: 31001, 31002, 31003, 31004, 31005, CS2023001)
+// Student Master Roster (covers standard demo accounts: 31001-31005, and 2nd Year 21001)
 const DEMO_STUDENTS = [
   { student_id: 1, roll_no: '31001', name: 'Kavya Mohan Kulkarni', aliases: ['CS2023001', '31001', '1'] },
   { student_id: 2, roll_no: '31002', name: 'Siddharth Eknath Nale', aliases: ['CS2023002', '31002', '2'] },
   { student_id: 3, roll_no: '31003', name: 'Aditi Suresh Sharma', aliases: ['CS2023003', '31003', '3'] },
   { student_id: 4, roll_no: '31004', name: 'Rohan Rajendra Verma', aliases: ['CS2023004', '31004', '4'] },
-  { student_id: 5, roll_no: '31005', name: 'Neha Deepak Joshi', aliases: ['CS2023005', '31005', '5'] }
+  { student_id: 5, roll_no: '31005', name: 'Neha Deepak Joshi', aliases: ['CS2023005', '31005', '5'] },
+  { student_id: 1022, roll_no: '21001', name: 'Aryan Rajesh Mehta', aliases: ['CS2024001', '21001', '1022', 'aryan.mehta@college.edu', 'f25ce001@student.example.edu'] }
 ];
 
 function buildDefaultMarks(): StudentMarkRecord[] {
@@ -198,6 +331,20 @@ function buildDefaultMarks(): StudentMarkRecord[] {
 
   // Seed baseline realistic marks for each schedule and student
   const baseScores: Record<string, { mid: number; internal: number; end: number }> = {
+    // Aryan Rajesh Mehta (2nd Year - Sem 1 Completed)
+    '1022-301': { mid: 17.5, internal: 18, end: 52.5 }, // CS101 -> 88.0 (A+)
+    '1022-302': { mid: 16, internal: 16.5, end: 49.5 },  // CS102 -> 82.0 (A+)
+    '1022-303': { mid: 14.5, internal: 15.5, end: 45 },  // CS103 -> 75.0 (A)
+    '1022-304': { mid: 18.5, internal: 19, end: 55.5 },  // CS104 -> 93.0 (O)
+    '1022-305': { mid: 15.5, internal: 16.5, end: 47 },  // CS105 -> 79.0 (A)
+
+    // Aryan Rajesh Mehta (2nd Year - Sem 2 Completed)
+    '1022-401': { mid: 17, internal: 17.5, end: 50.5 },  // CS106 -> 85.0 (A+)
+    '1022-402': { mid: 18, internal: 19, end: 54 },      // CS107 -> 91.0 (O)
+    '1022-403': { mid: 17, internal: 18, end: 52 },      // CS108 -> 87.0 (A+)
+    '1022-404': { mid: 15.5, internal: 16.5, end: 46 },  // CS109 -> 78.0 (A)
+    '1022-405': { mid: 16.5, internal: 17.5, end: 49 },  // CS110 -> 83.0 (A+)
+
     // Student 1 (High achiever)
     '1-101': { mid: 18, internal: 19, end: 54 }, // CS302 -> 91 (O)
     '1-102': { mid: 17, internal: 18, end: 51 }, // CS301 -> 86 (A+)
@@ -268,7 +415,7 @@ function buildDefaultMarks(): StudentMarkRecord[] {
   return records;
 }
 
-const STORAGE_KEY = 'college_erp_shared_exam_data_v1';
+const STORAGE_KEY = 'college_erp_shared_exam_data_v2';
 const UPDATE_EVENT = 'erp-exam-marks-updated';
 
 class SharedExamStore {
@@ -502,7 +649,7 @@ class SharedExamStore {
       semestersSet.add(5);
     }
 
-    const sortedSemesters = Array.from(semestersSet).sort((a, b) => b - a); // latest semester first
+    const sortedSemesters = Array.from(semestersSet).sort((a, b) => a - b); // ascending semester order: Sem 1, Sem 2, etc.
 
     const results: SemesterResultSummary[] = [];
     const formattedMarks: any[] = [];
@@ -520,16 +667,22 @@ class SharedExamStore {
 
       const hasFail = semMarks.some(m => m.status === 'Fail');
 
+      const label = semNum === 1 ? 'Semester 1 (2024-2025)' :
+                    semNum === 2 ? 'Semester 2 (2024-2025)' :
+                    `Semester ${semNum} (${semNum % 2 === 1 ? 'Autumn' : 'Spring'} ${2026 - Math.floor((6 - semNum) / 2)})`;
+      const acadYear = (semNum === 1 || semNum === 2) ? '2024-2025' : semNum === 3 ? '2025-2026' : '2026-27';
+      const pubDate = semNum === 1 ? 'Jan 12, 2026' : semNum === 2 ? 'Jun 18, 2026' : semNum === 5 ? 'Oct 25, 2026' : 'Nov 20, 2025';
+
       results.push({
         result_id: semNum,
         semester_id: semNum,
         semester_number: semNum,
-        semester_label: `Semester ${semNum} (${semNum % 2 === 1 ? 'Autumn' : 'Spring'} ${2026 - Math.floor((6 - semNum) / 2)})`,
-        academic_year: semNum === 5 ? '2026-27' : '2025-26',
+        semester_label: label,
+        academic_year: acadYear,
         sgpa,
         cgpa: sgpa, // updated below
         overall_status: hasFail ? 'Fail' : 'Pass',
-        result_date: semNum === 5 ? '2026-10-25' : '2025-11-20'
+        result_date: pubDate
       });
 
       semMarks.forEach((m, mIdx) => {

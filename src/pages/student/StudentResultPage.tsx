@@ -65,7 +65,8 @@ export const StudentResultPage: React.FC = () => {
               if (studentSem && apiResults.some(r => r.semester_number === studentSem || r.semester_id === studentSem)) {
                 return studentSem;
               }
-              return apiResults[0].semester_number || apiResults[0].semester_id;
+              const latest = apiResults[apiResults.length - 1];
+              return latest.semester_number || latest.semester_id || apiResults[0].semester_number;
             });
           } else if (apiMarks.length > 0) {
             const semNum = apiMarks[0].semester_number || apiMarks[0].semester_id || Number(user?.semester) || 5;
@@ -110,7 +111,8 @@ export const StudentResultPage: React.FC = () => {
           if (studentSem && storeResults.some(r => r.semester_number === studentSem)) {
             return studentSem;
           }
-          return storeResults[0].semester_number;
+          const latest = storeResults[storeResults.length - 1];
+          return latest.semester_number || storeResults[0].semester_number;
         });
       } else {
         setSelectedSemester(null);
