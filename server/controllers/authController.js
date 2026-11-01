@@ -156,6 +156,7 @@ async function login(req, res, next) {
       codeOrRoll: isStudent ? user.roll_no : (user.faculty_code || user.identifier),
       programOrDesignation: isStudent ? (user.course_name || 'B.Tech Program') : (isAdmin ? 'Chief System Administrator' : (isStaff ? (staffRoleLabels[user.role] || 'Staff Member') : (user.designation_name || 'Faculty Member'))),
       semester: isStudent ? user.current_semester : undefined,
+      year: isStudent ? (user.current_year || Math.ceil((user.current_semester || 5) / 2)) : undefined,
       section: isStudent ? (user.section_name || 'Section 1') : undefined,
       staffId: staffId || undefined
     };
@@ -216,6 +217,7 @@ async function getCurrentUser(req, res, next) {
             codeOrRoll: s.roll_no,
             programOrDesignation: s.course_name || 'B.Tech Program',
             semester: s.current_semester,
+            year: s.current_year || Math.ceil((s.current_semester || 5) / 2),
             section: s.section_name || 'Section 1'
           }
         });

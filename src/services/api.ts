@@ -104,6 +104,7 @@ class ApiClient {
           codeOrRoll: st.roll_no,
           programOrDesignation: st.course_name,
           semester: st.current_semester,
+          year: Math.ceil((st.current_semester || 5) / 2),
           section: st.section_name
         };
       } else if (role === 'FACULTY' || cleanId.startsWith('fac') || cleanId.includes('faculty')) {
@@ -161,6 +162,7 @@ class ApiClient {
           codeOrRoll: st.roll_no,
           programOrDesignation: st.course_name,
           semester: st.current_semester,
+          year: Math.ceil((st.current_semester || 5) / 2),
           section: st.section_name
         };
       }

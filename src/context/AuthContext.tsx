@@ -13,6 +13,7 @@ export interface AuthUser {
   codeOrRoll: string;
   programOrDesignation: string;
   semester?: number;
+  year?: number;
   section?: string;
 }
 

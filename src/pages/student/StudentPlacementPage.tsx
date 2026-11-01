@@ -5,7 +5,8 @@ import {
   FileText, 
   Loader2,
   AlertCircle,
-  XCircle
+  XCircle,
+  ShieldAlert
 } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
@@ -49,6 +50,31 @@ interface Announcement {
 
 export const StudentPlacementPage: React.FC = () => {
   const { user } = useAuth();
+  const studentYear = user?.year || Math.ceil((user?.semester || 5) / 2);
+
+  // ── Year eligibility gate ──────────────────────────────────────────────
+  if (studentYear <= 2) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center p-8 bg-white rounded-3xl shadow-[0px_10px_30px_rgba(112,144,176,0.12)] border border-slate-100">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center mb-5 shadow-sm">
+            <ShieldAlert className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-extrabold text-[#2C3E50] mb-2 font-sans">
+            You are not currently eligible for this activity
+          </h2>
+          <p className="text-xs text-[#718096] mb-6 leading-relaxed">
+            The Training &amp; Placement (T&amp;P) module and campus placement drives are accessible for Third Year and Final Year scholars only.
+          </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700">
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Year {studentYear} Student (Semester {user?.semester || 3}) — Not Eligible
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<'open_jobs' | 'my_applications' | 'announcements'>('open_jobs');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

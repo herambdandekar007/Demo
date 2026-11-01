@@ -370,25 +370,34 @@ export const StudentDashboardPage: React.FC = () => {
               <Briefcase className="w-4 h-4 text-[#4D8DFF]" />
               T&P Career Placement
             </h4>
-            {dashboardData?.placement ? (
-              <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#2C3E50]">{dashboardData.placement.company}</span>
-                  <Badge variant="success">{dashboardData.placement.package}</Badge>
-                </div>
-                <p className="text-[11px] text-[#718096] mt-1">Role: {dashboardData.placement.role} • Status: {dashboardData.placement.status}</p>
+            {(user?.year || Math.ceil((user?.semester || 5) / 2)) <= 2 ? (
+              <div className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>You are not currently eligible for this activity. Available from Third Year onwards.</span>
               </div>
             ) : (
-              <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs text-slate-500">
-                Explore campus recruitment opportunities and apply.
-              </div>
+              <>
+                {dashboardData?.placement ? (
+                  <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#2C3E50]">{dashboardData.placement.company}</span>
+                      <Badge variant="success">{dashboardData.placement.package}</Badge>
+                    </div>
+                    <p className="text-[11px] text-[#718096] mt-1">Role: {dashboardData.placement.role} • Status: {dashboardData.placement.status}</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs text-slate-500">
+                    Explore campus recruitment opportunities and apply.
+                  </div>
+                )}
+                <Link
+                  to="/student/placement"
+                  className="mt-3 block text-center text-xs font-bold text-[#4D8DFF] hover:underline"
+                >
+                  Open Placement Desk →
+                </Link>
+              </>
             )}
-            <Link
-              to="/student/placement"
-              className="mt-3 block text-center text-xs font-bold text-[#4D8DFF] hover:underline"
-            >
-              Open Placement Desk →
-            </Link>
           </div>
         </div>
       </div>
